@@ -1,0 +1,23 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Atlas debug</title>
+<style>body{background:#223;margin:0;color:#fff;font:14px monospace}canvas{image-rendering:pixelated;display:block}.row{display:flex;flex-wrap:wrap;gap:6px;padding:6px}.cell{background:#334;padding:2px;text-align:center;font-size:10px}</style></head>
+<body><div id="root"></div>
+<script type="module">
+import { Atlas } from '../src/render/Atlas.js';
+
+const atlas = new Atlas();
+const root = document.getElementById('root');
+const q = new URLSearchParams(location.search);
+const scale = +(q.get('s') || 4);
+const filter = q.get('f') || '';
+const keys = Object.keys(atlas.frames).filter(k => k.includes(filter));
+const row = document.createElement('div'); row.className = 'row';
+for (const k of keys) {
+  const f = atlas.frames[k];
+  const c = document.createElement('canvas'); c.width = f.w * scale; c.height = f.h * scale;
+  const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(atlas.canvas, f.x, f.y, f.w, f.h, 0, 0, f.w * scale, f.h * scale);
+  const cell = document.createElement('div'); cell.className = 'cell'; cell.appendChild(c); cell.appendChild(document.createTextNode(k));
+  row.appendChild(cell);
+}
+root.appendChild(row);
+</script></body></html>

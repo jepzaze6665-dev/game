@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Bannerfall — Dev Progress</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f1e; color: #f0ecff; padding: 24px; }
+  h1 { margin: 0 0 4px; font-size: 22px; } .sub { color: #9a97c4; margin-bottom: 20px; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .card { background: #1c1b33; border: 2px solid #3b3a63; padding: 14px 16px; }
+  .card h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: 1px; color: #ffd23f; text-transform: uppercase; }
+  ul { margin: 0; padding-left: 18px; } li { margin: 4px 0; font-size: 14px; }
+  .big { font-size: 28px; font-weight: 700; } .phase { font-size: 18px; font-weight: 600; }
+  .done li { color: #4fd062; } .issues li { color: #fca5a5; } .improving li { color: #93c5fd; }
+  .critic { white-space: pre-wrap; font-size: 14px; line-height: 1.45; color: #e8e4ff; }
+  .log li { color: #9a97c4; } .log b { color: #f0ecff; }
+  .pill { display: inline-block; padding: 3px 8px; border: 1px solid #4a4880; font-size: 12px; margin-left: 8px; color: #9a97c4; }
+</style></head>
+<body>
+  <h1>Bannerfall: Four Realms — Live Development Progress <span class="pill" id="updated">…</span></h1>
+  <div class="sub">Auto-refreshes every 3 seconds from <code>status.json</code>. <a href="../index.html" style="color:#93c5fd">Open the game</a></div>
+  <div class="grid">
+    <div class="card"><h2>Current phase</h2><div class="phase" id="phase">…</div></div>
+    <div class="card"><h2>Iteration rounds</h2><div class="big" id="round">0</div></div>
+    <div class="card"><h2>Overall polish status</h2><div class="phase" id="polish">…</div></div>
+    <div class="card done"><h2>Components completed</h2><ul id="completed"></ul></div>
+    <div class="card improving"><h2>Currently improving</h2><ul id="improving"></ul></div>
+    <div class="card issues"><h2>Known issues</h2><ul id="issues"></ul></div>
+    <div class="card"><h2>Races &amp; units</h2><ul id="units"></ul></div>
+    <div class="card"><h2>Balance status</h2><ul id="balance"></ul></div>
+    <div class="card" style="grid-column: 1 / -1"><h2>Latest playtest findings</h2><ul id="playtest"></ul></div>
+    <div class="card" style="grid-column: 1 / -1"><h2>Latest critic feedback</h2><div class="critic" id="critic"></div></div>
+    <div class="card log" style="grid-column: 1 / -1"><h2>Log</h2><ul id="log"></ul></div>
+  </div>
+<script>
+  const fill = (id, items, fmt) => { const el = document.getElementById(id); el.innerHTML = (items || []).map(fmt || (i => `<li>${i}</li>`)).join('') || '<li style="color:#666">—</li>'; };
+  async function refresh() {
+    try {
+      const r = await fetch('status.json?t=' + Date.now()); const s = await r.json();
+      document.getElementById('updated').textContent = 'updated ' + s.updated;
+      document.getElementById('phase').textContent = s.phase;
+      document.getElementById('round').textContent = s.round;
+      document.getElementById('polish').textContent = s.polish;
+      fill('completed', s.completed); fill('improving', s.improving); fill('issues', s.issues);
+      fill('units', Object.entries(s.units || {}), ([r, n]) => `<li><b>${r}</b>: ${n}/12 units</li>`);
+      fill('balance', Object.entries(s.balance || {}), ([r, t]) => `<li><b>${r}</b>: ${t}</li>`);
+      fill('playtest', s.playtest);
+      document.getElementById('critic').textContent = s.critic;
+      fill('log', (s.log || []).slice().reverse(), (l) => `<li><b>${l.time}</b> — ${l.text}</li>`);
+    } catch (e) { console.warn(e); }
+  }
+  refresh(); setInterval(refresh, 3000);
+</script>
+</body></html>

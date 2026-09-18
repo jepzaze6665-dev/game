@@ -1,0 +1,47 @@
+{
+  "updated": "2026-09-18 17:35",
+  "phase": "Phase 4 — Browser-verified race build; balance and combat polish",
+  "round": 5,
+  "polish": "All four race flows work in the real browser. Mobile HUD, long-press inspection, health bars and the eight-minute endgame were hardened in this pass.",
+  "completed": [
+    "Race system: Human / Demon / Robot / Mummy with passives (Formation, Rage, Armor Core, Undeath)",
+    "48 data-driven units (12 per race) with tags, counters, armour, abilities",
+    "Procedural pixel rig for 10 body types (humanoid, small, big, giant, quad, bug, flyer, vehicle, mech, mount)",
+    "4 base designs (castle, fortress, factory, temple) with damage states",
+    "Abilities: charge, splash, cone, pierce beam, chain lightning, multishot, healing/shield/rally auras, burn, slow, stun, lifesteal, summon-on-kill, burst-on-death, revive, regen, inferno nova, orbital beam, raise dead",
+    "Race selection screen with reveal transition; army roster screen; campaign with 4 chapters / 12 stages",
+    "12-card deployment bar with hotkeys 1-9 0 - =, race chips, counter hints, tooltips",
+    "Race-aware enemy AI: gold-weighted counter scoring, waves, budget discipline, emergency defence, race personalities",
+    "Centralised balance: tier value curve + race power knobs (src/data/balance.js), duel lab, race matrix harness",
+    "Browser QA: all 48 unit cards deployed through real input; pause, resume and restart verified for every race",
+    "Mobile landscape HUD verified at 844x390 with all 12 cards and controls inside the viewport",
+    "Eight-minute time limit, draw handling and late siege rules; seven automated gameplay/data regressions"
+  ],
+  "improving": ["Mummy matchup consistency", "Mirror-match side bias diagnostics", "Dense-battle effect readability"],
+  "issues": ["Seeded AI matrix remains volatile with small samples", "Human-vs-Mummy and Demon-vs-Mummy matchups still swing strongly", "Mirror diagnostics show side bias for some races; player battles remain asymmetric by design"],
+  "critic": "Round 5 browser pass: all race selection, roster, deployment and restart paths passed. Mobile controls previously overflowed the right edge and now fit. Health-bar rectangle arguments were reversed and are fixed. Long press now inspects without deploying.",
+  "balance": {
+    "human": "47% in the latest 72-game seeded matrix; Formation is healthy",
+    "demon": "56% in the latest matrix; Rage pressure is inside the target band",
+    "robot": "61% in the latest matrix; armour and range remain slightly strong",
+    "mummy": "36% in the latest matrix; Undeath still needs matchup-specific help"
+  },
+  "playtest": [
+    "All 12 units deployed through real browser input for each of the four races",
+    "Pause, resume and restart preserve the selected race",
+    "Mobile 844x390: all deployment cards, base bars and controls fit the viewport",
+    "72-game seeded matrix: Human 47%, Demon 56%, Robot 61%, Mummy 36%; average 5.0 minutes; no game exceeded the 8-minute limit",
+    "Largest remaining gameplay problem: Mummy matchup consistency, especially versus Human"
+  ],
+  "units": { "human": 12, "demon": 12, "robot": 12, "mummy": 12 },
+  "log": [
+    { "time": "12:00", "text": "Project scaffolded: data, art rig, sim, renderer, HUD, menus, audio written." },
+    { "time": "12:40", "text": "First render in browser. Fixed vendored three.core.js, flipped-sprite culling, watchdog loop." },
+    { "time": "13:10", "text": "Balance pass: base HP, siege damage scaling, comeback income, base towers, AI saving fixed." },
+    { "time": "13:40", "text": "Endgame cheer/flee, HUD scaling with viewport, codex/campaign layout fixes." },
+    { "time": "14:20", "text": "Critic round 3: combat blob, title overlap, speed multiplier, generic defeat text. Fixes applied." },
+    { "time": "15:30", "text": "Four races: data (48 units), combat/counter/armour/abilities, rig for 10 body types, 4 bases, race UI." },
+    { "time": "16:10", "text": "Balance harnesses (duel lab, matrix). Value normaliser + race power knobs. Overtime income." },
+    { "time": "17:35", "text": "Round 5: real-browser QA for four races, mobile HUD fix, long-press fix, health-bar fix, timed endgame, seeded diagnostics and regression suite." }
+  ]
+}

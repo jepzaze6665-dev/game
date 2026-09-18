@@ -1,0 +1,22 @@
+{
+  "name": "bannerfall-four-realms",
+  "version": "1.0.0",
+  "description": "Original four-race ThreeJS lane strategy game",
+  "main": "index.js",
+  "scripts": {
+    "start": "node tools/serve.mjs 8765",
+    "test": "node --test tools/game.test.mjs",
+    "test:browser": "node tools/browser-test.mjs",
+    "test:balance": "node tools/matrix.mjs 12"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
+}
