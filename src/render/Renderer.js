@@ -8,6 +8,7 @@ import { Ground } from './Ground.js';
 import { Weather } from './Weather.js';
 import { TEAM, LANE } from '../data/units.js';
 import { unitCell } from '../art/rig.js';
+import { SKELETONS } from '../art/skeletons.js';
 import { PROJECTILES } from '../sim/Projectiles.js';
 
 export const PPU = 12;                 // authoring scale of the procedural pixel art (px per world unit)
@@ -37,7 +38,7 @@ export class Renderer {
     this.atlas.art = this.art;           // HUD/menus draw hand-drawn icons through the same handle
     this.ppu = PPU;
     this.batch = new SpriteBatch(this.atlas, 10000, PPU, this.ppu);
-    this.artBatch = new SpriteBatch(this.art, 4000, 75, this.ppu);
+    this.artBatch = new SpriteBatch(this.art, 16000, 75, this.ppu);
     this.ground = new Ground(HI_RES ? GROUND_PPU : PPU);
     this.weather = new Weather();
     this.scene.add(this.ground.mesh);
@@ -207,6 +208,8 @@ export class Renderer {
       return null;
     }
     b.push('shadow_big', u.x, u.y - 0.05, 0.2, { scale: shadowScale, tint: SHADOW_TINT[u.team], alpha: 0.9 });
+    const rig = this.art.rigs[u.type.id];
+    if (rig) { this.drawPuppet(u, rig, f, z); return { top: u.y + f.h / f.ppu * sc + 0.15, w: Math.max(0.8, Math.min(2.4, wUnits * 0.8)), big: wUnits > 1.8 }; }
     const pose = this.dollPose(u);
     let hop = u.spawnT > 0 ? Math.sin((0.35 - u.spawnT) / 0.35 * Math.PI) * 0.35 : 0;
     if (u.state === 'cheer') hop = Math.abs(Math.sin(u.cheerT * 7)) * 0.5;
@@ -224,6 +227,42 @@ export class Renderer {
       if (Math.random() < (heavy ? 0.25 : 0.03) * dtScale(dt)) this.onDust(u.x - u.dir * (heavy ? 0.9 : 0.4), u.y - 0.1, heavy ? 1 : 0.6);
     }
     return { top: u.y + f.h / f.ppu * sc + 0.15, w: Math.max(0.8, Math.min(2.4, wUnits * 0.8)), big: wUnits > 1.8 };
+  }
+
+  // Cut-out puppet: every part rotates about its pivot, children follow their
+  // parent (torso -> head/arms). Angles come from the skeleton's pose function.
+  drawPuppet(u, rig, f, z) {
+    const ab = this.artBatch, def = u.type, dir = u.dir, flip = dir < 0;
+    const sc = def.look.scale || 1, ppu = f.ppu / sc;
+    const pose = SKELETONS[rig.skeleton].pose({
+      anim: u.anim, state: u.state, phase: u.phase, phaseT: u.phaseT, windup: def.windup, recover: def.recover,
+      animT: u.animT, speed: def.movementSpeed, time: this.time, seed: (u.id % 13) * 0.5, hit: u.hitStun > 0 && u.state !== 'attack',
+    });
+    let hop = u.spawnT > 0 ? Math.sin((0.35 - u.spawnT) / 0.35 * Math.PI) * 0.35 : 0;
+    if (u.state === 'cheer') hop = Math.abs(Math.sin(u.cheerT * 7)) * 0.5;
+    const jitter = u.hitStun > 0 ? (Math.random() - 0.5) * 0.12 : 0;
+    const rootX = u.x + pose.dx * dir + jitter, rootY = u.y + pose.dy + hop;
+    const byName = {}; for (const p of rig.parts) byName[p.name] = p;
+    const world = {};
+    const place = (p) => {
+      if (world[p.name]) return world[p.name];
+      const a = pose.angles[p.name] || 0;
+      let w;
+      if (p.parent && byName[p.parent]) {
+        const par = place(byName[p.parent]);
+        const dx = (p.pivot[0] - byName[p.parent].pivot[0]) / ppu * dir, dy = -(p.pivot[1] - byName[p.parent].pivot[1]) / ppu;
+        const c = Math.cos(par.ang), s = Math.sin(par.ang);
+        w = { x: par.x + dx * c - dy * s, y: par.y + dx * s + dy * c, ang: par.ang + a * dir };
+      } else {
+        w = { x: rootX + (p.pivot[0] - f.ax) / ppu * dir, y: rootY - (p.pivot[1] - f.ay) / ppu, ang: a * dir };
+      }
+      return (world[p.name] = w);
+    };
+    const rim = 1.5 / this.ppu, tint = TEAM_TINT[u.team];
+    const flash = u.flash * 0.9;
+    const bodyTint = u.burn ? [1, 0.75, 0.55] : u.slow ? [0.75, 1, 0.75] : undefined;
+    for (const p of rig.parts) { const w = place(p); for (const [ox, oy] of [[rim, 0], [-rim, 0], [0, rim], [0, -rim]]) ab.push(p.key, w.x + ox, w.y + oy, z - 0.002, { flip, rot: w.ang, flash: 1, tint, alpha: 0.75, scale: sc }); }
+    for (const p of rig.parts) { const w = world[p.name]; ab.push(p.key, w.x, w.y, z, { flip, rot: w.ang, flash, tint: bodyTint, scale: sc }); }
   }
 
   drawUnits(battle, dt) {
