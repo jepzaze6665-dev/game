@@ -29,6 +29,7 @@ No build step. `vendor/three.module.js` + `vendor/three.core.js` are the only de
 - `tools/atlas.html?s=6&f=_0_` — inspect generated sprite atlas
 - `tools/mobile.html` — phone/tablet viewport harness
 - `progress/index.html` — live development progress page
+- `docs/graphic-bible.html` — art, animation and UI standard, rendered live from the game code (palettes, every sprite, HUD kit, crowd tests)
 
 ## Debug
 Add `?bg=1` to keep the simulation running when the tab is hidden. `window.GAME` exposes `startBattle`, `deploy`, `autoplay`, `menus`, `speed`.

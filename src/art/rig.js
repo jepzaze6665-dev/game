@@ -358,4 +358,4 @@ export function buildUnitFrames(id, team) {
   return out;
 }
 
-export { CELLS };
+export { CELLS, SIZES, WALK, ATTACK, ATTACK_BY_WEAPON, attackSet };

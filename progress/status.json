@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-19 12:30",
+  "updated": "2026-09-19 14:10",
   "phase": "Phase 5 — Matchup balance pass; combat rules hardened",
   "round": 6,
   "polish": "Every race matchup now sits between 31% and 69% over 36 seeded games per pair (was 0-8% for Mummy vs Human and Robot vs Mummy). Counter rules are honest to the codex, and timed games no longer end in draws.",
@@ -19,7 +19,8 @@
     "Counter system: weakAgainst is a real +30% modifier, race-wide tags (UNDEAD, MECHANICAL) capped at +20%, ARMORED reserved for heavy plate",
     "Smooth armour curve (big hits punch through, small hits blunted, 45% floor) and fractional damage so swarm units are not rounded to nothing",
     "Value normaliser counts formation, rage, summons and revive realistically; per-unit TUNE override layer (src/data/tuning.js)",
-    "AI regroups into counter-waves instead of trickle-feeding squads into a winning army; time-limit tiebreak by surviving army value"
+    "AI regroups into counter-waves instead of trickle-feeding squads into a winning army; time-limit tiebreak by surviving army value",
+    "Graphic Bible (docs/graphic-bible.html): 24-section art/animation/UI standard rendered live from the rig, atlas, themes and CSS kit"
   ],
   "improving": [
     "Robot vs Mummy still leans Mummy (31%)",
@@ -85,6 +86,10 @@
     {
       "time": "12:30",
       "text": "Round 6: matchup balance (counter rules, armour curve, normaliser, AI regroup, Pharaoh/Plague/Robot tunes), time-limit tiebreak, tools/pair.mjs."
+    },
+    {
+      "time": "14:10",
+      "text": "Graphic Bible page added: live palettes, cells/anchors, silhouettes, sprite sheets, FX, HUD kit, icons, bases, readability and crowd tests, concept-prompt generator."
     }
   ]
 }
