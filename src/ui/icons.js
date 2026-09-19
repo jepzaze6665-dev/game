@@ -3,16 +3,18 @@ import { TEAM } from '../data/units.js';
 
 // Hand-drawn art (when the unit has some) is drawn smooth into a square box.
 export function artIcon(art, id, box, flip = false) {
-  const f = art.frame(id);
+  const f = art.frame(art.anims[id] ? art.anims[id].idle[0] : id);
   const c = document.createElement('canvas');
   c.width = box; c.height = box;
   const ctx = c.getContext('2d');
-  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  const fit = Math.min(box / f.w, box / f.h);
+  const pixel = !!art.anims[id];
+  ctx.imageSmoothingEnabled = !pixel; ctx.imageSmoothingQuality = 'high';
+  let fit = Math.min(box / f.w, box / f.h);
+  if (pixel) fit = fit >= 1 ? Math.floor(fit) : fit;     // integer upscale keeps pixels square
   const w = f.w * fit, h = f.h * fit;
   if (flip) { ctx.translate(box, 0); ctx.scale(-1, 1); }
   ctx.drawImage(art.canvas, f.x, f.y, f.w, f.h, (box - w) / 2, box - h, w, h);
-  c.style.width = box + 'px'; c.style.height = box + 'px'; c.style.imageRendering = 'auto';
+  c.style.width = box + 'px'; c.style.height = box + 'px'; c.style.imageRendering = pixel ? 'pixelated' : 'auto';
   c.dataset.scale = 1;
   return c;
 }

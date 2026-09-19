@@ -17,11 +17,11 @@
   },
   "h_archer": {
     "file": "human/h_archer.png",
-    "w": 113,
-    "h": 162,
-    "ax": 52,
-    "ay": 160,
-    "ppu": 75,
+    "w": 33,
+    "h": 41,
+    "ax": 17,
+    "ay": 41,
+    "ppu": 24,
     "src": "docs/human.jpg",
     "box": [
       196,
@@ -29,7 +29,8 @@
       312,
       224
     ],
-    "rig": "human/h_archer.rig.json"
+    "rig": "human/h_archer.rig.json",
+    "anim": "human/h_archer.anim.json"
   },
   "h_squire": {
     "file": "human/h_squire.png",
@@ -49,11 +50,11 @@
   },
   "h_spearman": {
     "file": "human/h_spearman.png",
-    "w": 114,
-    "h": 181,
-    "ax": 62,
-    "ay": 179,
-    "ppu": 75,
+    "w": 31,
+    "h": 45,
+    "ax": 17,
+    "ay": 45,
+    "ppu": 24,
     "src": "docs/human.jpg",
     "box": [
       337,
@@ -61,15 +62,16 @@
       452,
       224
     ],
-    "rig": "human/h_spearman.rig.json"
+    "rig": "human/h_spearman.rig.json",
+    "anim": "human/h_spearman.anim.json"
   },
   "h_crossbow": {
     "file": "human/h_crossbow.png",
-    "w": 150,
-    "h": 166,
-    "ax": 51,
-    "ay": 164,
-    "ppu": 75,
+    "w": 39,
+    "h": 45,
+    "ax": 14,
+    "ay": 44,
+    "ppu": 24,
     "src": "docs/human.jpg",
     "box": [
       652,
@@ -77,15 +79,16 @@
       805,
       225
     ],
-    "rig": "human/h_crossbow.rig.json"
+    "rig": "human/h_crossbow.rig.json",
+    "anim": "human/h_crossbow.anim.json"
   },
   "h_knight": {
     "file": "human/h_knight.png",
-    "w": 171,
-    "h": 214,
-    "ax": 91,
-    "ay": 212,
-    "ppu": 75,
+    "w": 43,
+    "h": 51,
+    "ax": 16,
+    "ay": 51,
+    "ppu": 24,
     "src": "docs/human.jpg",
     "box": [
       831,
@@ -93,15 +96,16 @@
       1003,
       271
     ],
-    "rig": "human/h_knight.rig.json"
+    "rig": "human/h_knight.rig.json",
+    "anim": "human/h_knight.anim.json"
   },
   "h_royalknight": {
     "file": "human/h_royalknight.png",
-    "w": 222,
-    "h": 274,
-    "ax": 114,
-    "ay": 272,
-    "ppu": 75,
+    "w": 35,
+    "h": 54,
+    "ax": 17,
+    "ay": 55,
+    "ppu": 24,
     "src": "docs/human.jpg",
     "box": [
       13,
@@ -109,15 +113,16 @@
       236,
       561
     ],
-    "rig": "human/h_royalknight.rig.json"
+    "rig": "human/h_royalknight.rig.json",
+    "anim": "human/h_royalknight.anim.json"
   },
   "h_firemage": {
     "file": "human/h_firemage.png",
-    "w": 153,
-    "h": 186,
-    "ax": 88,
-    "ay": 184,
-    "ppu": 75,
+    "w": 36,
+    "h": 46,
+    "ax": 18,
+    "ay": 45,
+    "ppu": 24,
     "src": "docs/human.jpg",
     "box": [
       241,
@@ -125,15 +130,16 @@
       396,
       561
     ],
-    "rig": "human/h_firemage.rig.json"
+    "rig": "human/h_firemage.rig.json",
+    "anim": "human/h_firemage.anim.json"
   },
   "h_paladin": {
     "file": "human/h_paladin.png",
-    "w": 171,
-    "h": 190,
-    "ax": 64,
-    "ay": 188,
-    "ppu": 75,
+    "w": 41,
+    "h": 49,
+    "ax": 20,
+    "ay": 48,
+    "ppu": 24,
     "src": "docs/human.jpg",
     "box": [
       634,
@@ -141,15 +147,16 @@
       809,
       559
     ],
-    "rig": "human/h_paladin.rig.json"
+    "rig": "human/h_paladin.rig.json",
+    "anim": "human/h_paladin.anim.json"
   },
   "h_king": {
     "file": "human/h_king.png",
-    "w": 191,
-    "h": 243,
-    "ax": 100,
-    "ay": 241,
-    "ppu": 75,
+    "w": 43,
+    "h": 55,
+    "ax": 22,
+    "ay": 56,
+    "ppu": 24,
     "src": "docs/human.jpg",
     "box": [
       809,
@@ -157,6 +164,7 @@
       1002,
       561
     ],
-    "rig": "human/h_king.rig.json"
+    "rig": "human/h_king.rig.json",
+    "anim": "human/h_king.anim.json"
   }
 }

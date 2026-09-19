@@ -12,11 +12,13 @@ export class ArtAtlas {
     this.ctx = this.canvas.getContext('2d');
     this.frames = {};
     this.rigs = {};        // unitId -> { skeleton, parts: [{ name, parent, pivot, key }] } for cut-out puppets
+    this.anims = {};       // unitId -> { idle: [frameKeys], walk, run, atk, hurt, death, ... } for frame-animated sprites
     this.ready = false;
     this.texture = new THREE.CanvasTexture(this.canvas);
-    this.texture.magFilter = THREE.LinearFilter;
-    this.texture.minFilter = THREE.LinearMipmapLinearFilter;
-    this.texture.generateMipmaps = true;
+    // pixel art: nearest filtering, no mipmaps (the renderer draws at an integer scale)
+    this.texture.magFilter = THREE.NearestFilter;
+    this.texture.minFilter = THREE.NearestFilter;
+    this.texture.generateMipmaps = false;
     // NoColorSpace: the batch shader writes texels straight to the canvas; an
     // sRGB-tagged texture would be decoded to linear and render far too dark.
     this.texture.colorSpace = THREE.NoColorSpace;
@@ -33,11 +35,22 @@ export class ArtAtlas {
     const manifest = await res.json();
     const entries = Object.entries(manifest);
     const loadImage = (src) => new Promise((ok, fail) => { const im = new Image(); im.onload = () => ok(im); im.onerror = fail; im.src = this.base + src; });
-    const images = await Promise.all(entries.map(([, e]) => loadImage(e.file)));
-    // items to pack: the whole sprite of every unit, plus every part of rigged units
-    const items = entries.map(([id, e], i) => ({ key: id, im: images[i], sx: 0, sy: 0, w: images[i].naturalWidth, h: images[i].naturalHeight, ax: e.ax, ay: e.ay, ppu: e.ppu || 75 }));
+    const images = await Promise.all(entries.map(([, e]) => e.file && !e.anim ? loadImage(e.file).catch(() => null) : null));   // an animation sheet supersedes the single drawing
+    // items to pack: the whole sprite of every unit, plus every part of rigged units and every frame of animated ones
+    const items = [];
+    entries.forEach(([id, e], i) => { if (images[i]) items.push({ key: id, im: images[i], sx: 0, sy: 0, w: images[i].naturalWidth, h: images[i].naturalHeight, ax: e.ax, ay: e.ay, ppu: e.ppu || 75 }); });
     await Promise.all(entries.map(async ([id, e]) => {
-      if (!e.rig) return;
+      if (e.anim) {
+        try {
+          const anim = await (await fetch(this.base + e.anim, { cache: 'no-store' })).json();
+          const sheet = await loadImage(anim.sheet);
+          for (const key in anim.frames) { const [x, y, w, h, ax, ay] = anim.frames[key]; items.push({ key: `${id}#${key}`, im: sheet, sx: x, sy: y, w, h, ax, ay, ppu: anim.ppu || 24 }); }
+          const map = {}; for (const a in anim.anims) map[a] = anim.anims[a].map((k) => `${id}#${k}`);
+          this.anims[id] = map;
+          if (!images[entries.findIndex(([k]) => k === id)]) { const [x, y, w, h, ax, ay] = anim.frames[anim.anims.idle ? anim.anims.idle[0] : Object.keys(anim.frames)[0]]; items.push({ key: id, im: sheet, sx: x, sy: y, w, h, ax, ay, ppu: anim.ppu || 24 }); }
+        } catch (err) { console.warn('ArtAtlas: animation sheet failed for', id, err); }
+      }
+      if (!e.rig || e.anim) return;
       try {
         const rig = await (await fetch(this.base + e.rig, { cache: 'no-store' })).json();
         const sheet = await loadImage(rig.sheet);

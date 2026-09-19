@@ -13,10 +13,13 @@ import { PROJECTILES } from '../sim/Projectiles.js';
 
 export const PPU = 12;                 // authoring scale of the procedural pixel art (px per world unit)
 const MIN_VIRTUAL_WIDTH = 660;         // pixel mode: enough to see the whole lane incl. both bases
-// Hi-res mode: the canvas runs at native resolution and the world scale follows
-// the window so the whole lane (about 56 units) always fits. Hand-drawn art is
-// drawn at its own authoring scale; the remaining pixel sprites are upscaled.
-export const HI_RES = !/[?&]pixel=1/.test(location.search);
+// Pixel mode (default): the world is drawn at WORLD_PPU pixels per unit into a
+// low-resolution canvas that is upscaled by an integer, so sprite pixels stay
+// square. Frame-animated sprites are authored at WORLD_PPU; the procedural rig
+// (PPU) is doubled. ?hires=1 switches to the native-resolution mode used for
+// the hand-drawn puppet art.
+export const HI_RES = /[?&]hires=1/.test(location.search);
+export const WORLD_PPU = 24;
 const VISIBLE_UNITS = 56;
 const GROUND_PPU = 24;
 
@@ -39,7 +42,7 @@ export class Renderer {
     this.ppu = PPU;
     this.batch = new SpriteBatch(this.atlas, 10000, PPU, this.ppu);
     this.artBatch = new SpriteBatch(this.art, 16000, 75, this.ppu);
-    this.ground = new Ground(HI_RES ? GROUND_PPU : PPU);
+    this.ground = new Ground(GROUND_PPU);
     this.weather = new Weather();
     this.scene.add(this.ground.mesh);
     this.scene.add(this.batch.mesh);
@@ -61,9 +64,9 @@ export class Renderer {
     if (HI_RES) {
       this.ppu = Math.max(16, Math.min(48, Math.round(W / VISIBLE_UNITS)));
     } else {
-      s = Math.max(1, Math.floor(W / MIN_VIRTUAL_WIDTH));
-      while (s > 1 && (H / s) < 230) s--;
-      this.ppu = PPU;
+      s = Math.max(1, Math.round(W / (VISIBLE_UNITS * WORLD_PPU)));
+      while (s > 1 && (H / s) < 300) s--;
+      this.ppu = WORLD_PPU;
     }
     this.batch.setSnap(this.ppu); this.artBatch.setSnap(this.ppu);
     this.scale = s;
@@ -186,6 +189,40 @@ export class Renderer {
     return { dx, dy, rot, sx, sy };
   }
 
+  // Frame key for a frame-animated sprite in the unit's current state.
+  animFrame(u, anims) {
+    const pick = (list, t) => list[Math.max(0, Math.min(list.length - 1, Math.floor(t)))];
+    const cyc = (list, t) => list[((Math.floor(t) % list.length) + list.length) % list.length];
+    if (u.state === 'dead') { const d = anims.death || anims.hurt || anims.idle; return pick(d, u.deadT / 0.7 * d.length); }
+    if (u.state === 'downed') { const d = anims.death || anims.hurt || anims.idle; return d[Math.min(d.length - 1, Math.floor(d.length * 0.6))]; }
+    if (u.anim === 'atk' && anims.atk) {
+      const a = anims.atk, split = Math.max(1, Math.round(a.length * 0.45));
+      if (u.phase === 'windup') return pick(a, u.phaseT / Math.max(0.05, u.type.windup) * split);
+      return pick(a, split + u.phaseT / Math.max(0.05, u.type.recover) * (a.length - split));
+    }
+    if (u.stunT > 0 || (u.hitStun > 0 && u.state !== 'attack')) { const h = anims.hurt || anims.idle; return pick(h, (1 - u.flash) * h.length); }
+    if (u.anim === 'walk' || u.state === 'flee') {
+      const charging = u.chargeDist > 3.5 || u.state === 'flee';
+      const w = (charging && anims.run) || anims.walk || anims.idle;
+      return cyc(w, u.animT * (8 + u.type.movementSpeed * 1.5));
+    }
+    const idle = anims.idle || anims.walk;
+    return cyc(idle, this.time * 6 + (u.id % 7));
+  }
+
+  drawAnimUnit(u, anims, z) {
+    const ab = this.artBatch, sc = u.type.look.scale || 1, flip = u.dir < 0;
+    const key = this.animFrame(u, anims);
+    let hop = u.spawnT > 0 ? Math.sin((0.35 - u.spawnT) / 0.35 * Math.PI) * 0.35 : 0;
+    if (u.state === 'cheer') hop = Math.abs(Math.sin(u.cheerT * 7)) * 0.5;
+    const x = u.x, y = u.y + hop;
+    const rim = 1 / this.ppu, tint = TEAM_TINT[u.team];
+    for (const [ox, oy] of [[rim, 0], [-rim, 0], [0, rim], [0, -rim]]) ab.push(key, x + ox, y + oy, z - 0.002, { flip, flash: 1, tint, alpha: 0.75, scale: sc });
+    const bodyTint = u.burn ? [1, 0.75, 0.55] : u.slow ? [0.75, 1, 0.75] : undefined;
+    ab.push(key, x, y, z, { flip, flash: u.flash * 0.5, tint: bodyTint, scale: sc });
+    return key;
+  }
+
   drawArtUnit(u, dt) {
     const b = this.batch, ab = this.artBatch;
     const f = this.art.frame(u.type.id);
@@ -194,6 +231,13 @@ export class Renderer {
     const z = 1 + (LANE.halfWidth - u.y) * 0.01;
     const flip = u.dir < 0;
     const shadowScale = wUnits / (17 / PPU) * 0.9;
+    const anims = this.art.anims[u.type.id];
+    if (anims && (u.state === 'dead' || u.state === 'downed')) {
+      const alpha = u.state === 'downed' ? 0.7 + 0.3 * Math.sin(this.time * 10) : u.deadT < 1.0 ? 1 : Math.max(0, 1 - (u.deadT - 1.0) / 0.5);
+      b.push('shadow_big', u.x, u.y, 0.2, { alpha: alpha * 0.8, scale: shadowScale, tint: SHADOW_TINT[u.team] });
+      ab.push(this.animFrame(u, anims), u.x, u.y, z, { flip, alpha, flash: u.flash * 0.5, scale: sc });
+      return null;
+    }
     if (u.state === 'dead') {
       const t = Math.min(1, u.deadT / 0.3);
       const rot = -u.dir * t * Math.PI * 0.5;
@@ -208,6 +252,7 @@ export class Renderer {
       return null;
     }
     b.push('shadow_big', u.x, u.y - 0.05, 0.2, { scale: shadowScale, tint: SHADOW_TINT[u.team], alpha: 0.9 });
+    if (anims) { const key = this.drawAnimUnit(u, anims, z); const af = this.art.frame(key); return { top: u.y + af.ay / af.ppu * sc + 0.15, w: Math.max(0.8, Math.min(2.4, wUnits * 0.8)), big: wUnits > 1.8 }; }
     const rig = this.art.rigs[u.type.id];
     if (rig) { this.drawPuppet(u, rig, f, z); return { top: u.y + f.h / f.ppu * sc + 0.15, w: Math.max(0.8, Math.min(2.4, wUnits * 0.8)), big: wUnits > 1.8 }; }
     const pose = this.dollPose(u);

@@ -171,7 +171,7 @@ export class Battle {
     updateProjectiles(this, dt);
     for (const b of this.bases) { b.flash = Math.max(0, b.flash - dt * 4); this.towerFire(b, dt); }
     // remove finished corpses
-    for (let i = this.units.length - 1; i >= 0; i--) if (this.units[i].state === 'dead' && this.units[i].deadT > 0.9) this.units.splice(i, 1);
+    for (let i = this.units.length - 1; i >= 0; i--) if (this.units[i].state === 'dead' && this.units[i].deadT > 1.5) this.units.splice(i, 1);
     this.updateFrontline();
   }
 
