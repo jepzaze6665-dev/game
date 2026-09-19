@@ -155,14 +155,16 @@ export function cutParts(img, rig) {
 }
 async function exportRig() {
   const parts = cutParts(img, rig);
-  if (parts.length !== rig.parts.length) { log('Every part needs a polygon (3+ points) and a pivot (shift+click).'); return; }
+  if (!parts.length) { log('Draw a polygon (3+ points) and set a pivot (shift+click) for at least one part.'); return; }
+  const skipped = rig.parts.filter((p) => !parts.find((q) => q.name === p.name)).map((p) => p.name);
+  if (skipped.length) log('skipped parts without polygon/pivot: ' + skipped.join(', '));
   // shelf pack into one sheet
   const pad = 2; let x = pad, y = pad, rowH = 0; const W = 512;
   const placed = parts.map((p) => { const w = p.canvas.width, h = p.canvas.height; if (x + w + pad > W) { x = pad; y += rowH + pad; rowH = 0; } const r = [x, y, w, h]; x += w + pad; rowH = Math.max(rowH, h); return r; });
   const sheet = document.createElement('canvas'); sheet.width = W; sheet.height = y + rowH + pad;
   const sctx = sheet.getContext('2d'); parts.forEach((p, i) => sctx.drawImage(p.canvas, placed[i][0], placed[i][1]));
   const m = manifest[unitId]; const race = m.file.split('/')[0];
-  const json = { skeleton: rig.skeleton, sheet: `${race}/${unitId}.parts.png`, parts: parts.map((p, i) => ({ name: p.name, parent: p.parent, rect: placed[i], pivot: p.pivot, off: p.off, poly: p.poly })) };
+  const json = { skeleton: rig.skeleton, legSwing: rig.legSwing, sheet: `${race}/${unitId}.parts.png`, parts: parts.map((p, i) => ({ name: p.name, parent: p.parent, rect: placed[i], pivot: p.pivot, off: p.off, poly: p.poly })) };
   const blob = await new Promise((ok) => sheet.toBlob(ok, 'image/png'));
   await saveFile(`${race}/${unitId}.parts.png`, blob);
   await saveFile(`${race}/${unitId}.rig.json`, JSON.stringify(json, null, 1));
@@ -187,6 +189,7 @@ function drawPreview() {
     : cycle < 3.2 ? { anim: 'atk', state: 'attack', phase: 'recover', phaseT: cycle - 2.5, windup: 0.5, recover: 0.7, time, seed: 0, style }
     : { anim: 'idle', time, seed: 0 };
   const pose = SKELETONS[rig.skeleton].pose(a);
+  if (rig.legSwing != null) for (const k of ['legF', 'legB']) pose.angles[k] *= rig.legSwing;
   const byName = {}; for (const p of lastParts) byName[p.name] = p;
   const world = {};
   const place = (p) => {
@@ -207,5 +210,6 @@ function drawPreview() {
   ctx.fillStyle = '#fff'; ctx.font = '12px monospace'; ctx.fillText(a.anim + (a.phase ? ' ' + a.phase + ' (' + style + ')' : ''), 6, pv.height - 6);
 }
 drawPreview();
+window.rigDebug = { get rig() { return rig; }, get img() { return img; }, cutParts, exportRig };
 loadUnit($('#unit').value);
 </script></body></html>

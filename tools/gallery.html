@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Puppet gallery</title>
+<style>
+  body { margin: 0; background: #5fae4a; color: #fff; font: 12px monospace; }
+  #row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 12px; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .cell span { text-shadow: 1px 1px 0 #000; }
+  canvas { background: transparent; }
+  #bar { position: fixed; top: 0; right: 0; padding: 6px 10px; background: rgba(0,0,0,.5); }
+</style></head>
+<body><div id="row"></div><div id="bar">walk 0–2s · windup 2–2.5s · strike 2.5–3.2s · idle 3.2–4s · <code>?freeze=2.45</code> holds a moment · <code>?scale=2</code></div>
+<script type="module">
+import { SKELETONS, attackStyle } from '../src/art/skeletons.js';
+import { UNITS } from '../src/data/units.js';
+const BASE = '../assets/units/';
+const q = new URLSearchParams(location.search);
+const scale = +(q.get('scale') || 1.5), freeze = q.get('freeze');
+const manifest = await (await fetch(BASE + 'manifest.json', { cache: 'no-store' })).json();
+const load = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = BASE + src + '?t=' + Date.now(); });
+const units = [];
+for (const id in manifest) {
+  const m = manifest[id]; if (!m.rig) continue;
+  const rig = await (await fetch(BASE + m.rig, { cache: 'no-store' })).json();
+  const sheet = await load(rig.sheet);
+  const parts = rig.parts.map((p) => { const c = document.createElement('canvas'); c.width = p.rect[2]; c.height = p.rect[3]; c.getContext('2d').drawImage(sheet, p.rect[0], p.rect[1], p.rect[2], p.rect[3], 0, 0, p.rect[2], p.rect[3]); return { ...p, canvas: c }; });
+  const cell = document.createElement('div'); cell.className = 'cell';
+  const cv = document.createElement('canvas'); cv.width = m.w * scale + 60 * scale; cv.height = m.h * scale + 20;
+  cell.appendChild(cv); cell.appendChild(Object.assign(document.createElement('span'), { textContent: (UNITS[id] ? UNITS[id].name : id) + ' · ' + attackStyle(UNITS[id] && UNITS[id].look.weapon) }));
+  document.getElementById('row').appendChild(cell);
+  units.push({ id, m, rig, parts, cv });
+}
+const t0 = performance.now();
+function frame() {
+  requestAnimationFrame(frame);
+  const time = freeze != null ? +freeze : (performance.now() - t0) / 1000, cycle = time % 4;
+  for (const u of units) {
+    const style = attackStyle(UNITS[u.id] && UNITS[u.id].look.weapon);
+    const a = cycle < 2 ? { anim: 'walk', animT: time, speed: 2.4, time, seed: 0 }
+      : cycle < 2.5 ? { anim: 'atk', state: 'attack', phase: 'windup', phaseT: cycle - 2, windup: 0.5, recover: 0.5, time, seed: 0, style }
+      : cycle < 3.2 ? { anim: 'atk', state: 'attack', phase: 'recover', phaseT: cycle - 2.5, windup: 0.5, recover: 0.7, time, seed: 0, style }
+      : { anim: 'idle', time, seed: 0 };
+    const pose = SKELETONS[u.rig.skeleton].pose(a);
+    if (u.rig.legSwing != null) for (const k of ['legF', 'legB']) pose.angles[k] *= u.rig.legSwing;
+    const byName = {}; for (const p of u.parts) byName[p.name] = p;
+    const world = {};
+    const place = (p) => {
+      if (world[p.name]) return world[p.name];
+      let base, ang;
+      if (p.parent && byName[p.parent]) { const par = place(byName[p.parent]); const dx = p.pivot[0] - byName[p.parent].pivot[0], dy = p.pivot[1] - byName[p.parent].pivot[1]; const c = Math.cos(-par.ang), sn = Math.sin(-par.ang); base = [par.x + dx * c - dy * sn, par.y + dx * sn + dy * c]; ang = par.ang + (pose.angles[p.name] || 0); }
+      else { base = [p.pivot[0] + pose.dx * 75, p.pivot[1] - pose.dy * 75]; ang = pose.angles[p.name] || 0; }
+      return (world[p.name] = { x: base[0], y: base[1], ang });
+    };
+    const ctx = u.cv.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.clearRect(0, 0, u.cv.width, u.cv.height);
+    const ox = 30 * scale, oy = 10;
+    for (const p of u.parts) { const wp = place(p); ctx.save(); ctx.translate(ox + wp.x * scale, oy + wp.y * scale); ctx.rotate(-wp.ang); ctx.scale(pose.sx, pose.sy); ctx.drawImage(p.canvas, (p.off[0] - p.pivot[0]) * scale, (p.off[1] - p.pivot[1]) * scale, p.canvas.width * scale, p.canvas.height * scale); ctx.restore(); }
+  }
+}
+frame();
+</script></body></html>

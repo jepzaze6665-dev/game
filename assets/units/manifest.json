@@ -1,34 +1,162 @@
 {
   "h_swordsman": {
     "file": "human/h_swordsman.png",
-    "w": 105,
-    "h": 165,
-    "ax": 50,
-    "ay": 163,
+    "w": 104,
+    "h": 167,
+    "ax": 52,
+    "ay": 165,
     "ppu": 75,
     "src": "docs/human.jpg",
     "box": [
-      478,
-      22,
+      511,
+      24,
       618,
-      188
+      224
     ],
     "rig": "human/h_swordsman.rig.json"
   },
   "h_archer": {
     "file": "human/h_archer.png",
     "w": 113,
-    "h": 161,
+    "h": 162,
     "ax": 52,
-    "ay": 159,
+    "ay": 160,
     "ppu": 75,
     "src": "docs/human.jpg",
     "box": [
-      198,
-      24,
+      196,
+      27,
       312,
-      190
+      224
     ],
     "rig": "human/h_archer.rig.json"
+  },
+  "h_squire": {
+    "file": "human/h_squire.png",
+    "w": 113,
+    "h": 180,
+    "ax": 54,
+    "ay": 178,
+    "ppu": 75,
+    "src": "docs/human.jpg",
+    "box": [
+      43,
+      11,
+      158,
+      223
+    ],
+    "rig": "human/h_squire.rig.json"
+  },
+  "h_spearman": {
+    "file": "human/h_spearman.png",
+    "w": 114,
+    "h": 181,
+    "ax": 62,
+    "ay": 179,
+    "ppu": 75,
+    "src": "docs/human.jpg",
+    "box": [
+      337,
+      10,
+      452,
+      224
+    ],
+    "rig": "human/h_spearman.rig.json"
+  },
+  "h_crossbow": {
+    "file": "human/h_crossbow.png",
+    "w": 150,
+    "h": 166,
+    "ax": 51,
+    "ay": 164,
+    "ppu": 75,
+    "src": "docs/human.jpg",
+    "box": [
+      652,
+      23,
+      805,
+      225
+    ],
+    "rig": "human/h_crossbow.rig.json"
+  },
+  "h_knight": {
+    "file": "human/h_knight.png",
+    "w": 171,
+    "h": 214,
+    "ax": 91,
+    "ay": 212,
+    "ppu": 75,
+    "src": "docs/human.jpg",
+    "box": [
+      831,
+      26,
+      1003,
+      271
+    ],
+    "rig": "human/h_knight.rig.json"
+  },
+  "h_royalknight": {
+    "file": "human/h_royalknight.png",
+    "w": 222,
+    "h": 274,
+    "ax": 114,
+    "ay": 272,
+    "ppu": 75,
+    "src": "docs/human.jpg",
+    "box": [
+      13,
+      256,
+      236,
+      561
+    ],
+    "rig": "human/h_royalknight.rig.json"
+  },
+  "h_firemage": {
+    "file": "human/h_firemage.png",
+    "w": 153,
+    "h": 186,
+    "ax": 88,
+    "ay": 184,
+    "ppu": 75,
+    "src": "docs/human.jpg",
+    "box": [
+      241,
+      344,
+      396,
+      561
+    ],
+    "rig": "human/h_firemage.rig.json"
+  },
+  "h_paladin": {
+    "file": "human/h_paladin.png",
+    "w": 171,
+    "h": 190,
+    "ax": 64,
+    "ay": 188,
+    "ppu": 75,
+    "src": "docs/human.jpg",
+    "box": [
+      634,
+      340,
+      809,
+      559
+    ],
+    "rig": "human/h_paladin.rig.json"
+  },
+  "h_king": {
+    "file": "human/h_king.png",
+    "w": 191,
+    "h": 243,
+    "ax": 100,
+    "ay": 241,
+    "ppu": 75,
+    "src": "docs/human.jpg",
+    "box": [
+      809,
+      287,
+      1002,
+      561
+    ],
+    "rig": "human/h_king.rig.json"
   }
 }

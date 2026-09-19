@@ -18,7 +18,7 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def cut(src, box, uid, ppu=75, tol=18, pocket_max=0):
+def cut(src, box, uid, ppu=75, tol=18, pocket_max=0, strip_text=True, soft=0):
     im = Image.open(os.path.join(ROOT, src)).convert('RGB')
     x0, y0, x1, y1 = box
     a = np.asarray(im.crop((x0, y0, x1, y1))).astype(np.int16)
@@ -29,6 +29,16 @@ def cut(src, box, uid, ppu=75, tol=18, pocket_max=0):
     t = (np.arange(w) / max(1, w - 1))[None, :, None]
     bg = left[:, None, :] * (1 - t) + right[:, None, :] * t
     close = np.abs(a - bg).max(axis=2) <= tol
+    # caption rows under the character: rows in the lower part of the crop whose
+    # foreground is almost entirely bright text are treated as background
+    if strip_text:
+        # captions are white text: the first row in the lower half with a run of
+        # near-white pixels starts the caption block; everything below it goes
+        white = (a.min(axis=2) >= 225).sum(axis=1)
+        for y in range(int(h * 0.55), h - 5):
+            if all(white[y + i] >= 5 for i in range(5)):   # a text line is a block of white rows
+                close[max(0, y - 4):, :] = True
+                break
     # the fill may only travel through pixels that are not touching the dark
     # outline (closes 1 px gaps in it); the rim is added back afterwards
     lum = a.mean(axis=2)
@@ -68,6 +78,20 @@ def cut(src, box, uid, ppu=75, tol=18, pocket_max=0):
             if len(comp) <= pocket_max:
                 for y, x in comp: outside[y, x] = True
     alpha = np.where(outside, 0, 255).astype(np.uint8)
+    # glow halos: everything the fill reaches with a looser tolerance (but which the
+    # strict fill did not) becomes semi-transparent, fading with its distance from the background colour
+    if soft > tol:
+        diff = np.abs(a - bg).max(axis=2)
+        loose = (diff <= soft) & ~near_dark
+        reach = outside.copy(); q = deque([(y, x) for y in range(h) for x in range(w) if outside[y, x]])
+        while q:
+            y, x = q.popleft()
+            for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                if 0 <= ny < h and 0 <= nx < w and loose[ny, nx] and not reach[ny, nx]:
+                    reach[ny, nx] = True; q.append((ny, nx))
+        halo = reach & ~outside
+        alpha[halo] = np.clip((diff[halo] - tol) / (soft - tol) * 255, 0, 255).astype(np.uint8)
+        outside = outside | (alpha == 0)
     # soften the very edge one pixel so the JPEG halo does not read as a hard grey rim
     edge = outside.copy()
     inner = ~outside
@@ -90,7 +114,7 @@ def cut(src, box, uid, ppu=75, tol=18, pocket_max=0):
     entry = {'file': f'{race}/{uid}.png', 'w': int(fw), 'h': int(fh), 'ax': ax, 'ay': int(fh - pad), 'ppu': ppu, 'src': src, 'box': list(box)}
     mpath = os.path.join(ROOT, 'assets', 'units', 'manifest.json')
     manifest = json.load(open(mpath)) if os.path.exists(mpath) else {}
-    manifest[uid] = entry
+    manifest[uid] = {**manifest.get(uid, {}), **entry}   # keep rig links and other extras
     json.dump(manifest, open(mpath, 'w'), indent=2)
     print(uid, '->', os.path.relpath(out, ROOT), f'{fw}x{fh} anchor ({ax},{entry["ay"]}) ppu {ppu}; {int(outside.sum())} px removed')
     return out
@@ -100,4 +124,4 @@ if __name__ == '__main__':
     args = [x for x in sys.argv[1:] if not x.startswith('--')]
     opts = dict(zip(sys.argv[1::1], sys.argv[2::1]))
     src, x0, y0, x1, y1, uid = args[0], *map(int, args[1:5]), args[5]
-    cut(src, (x0, y0, x1, y1), uid, ppu=int(opts.get("--ppu", 75)), tol=int(opts.get("--tol", 18)), pocket_max=int(opts.get("--pocket", 0)))
+    cut(src, (x0, y0, x1, y1), uid, ppu=int(opts.get("--ppu", 75)), tol=int(opts.get("--tol", 18)), pocket_max=int(opts.get("--pocket", 0)), soft=int(opts.get("--soft", 0)))

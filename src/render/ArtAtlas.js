@@ -41,7 +41,7 @@ export class ArtAtlas {
       try {
         const rig = await (await fetch(this.base + e.rig, { cache: 'no-store' })).json();
         const sheet = await loadImage(rig.sheet);
-        this.rigs[id] = { skeleton: rig.skeleton, parts: rig.parts.map((p) => ({ name: p.name, parent: p.parent, pivot: p.pivot, key: `${id}/${p.name}` })) };
+        this.rigs[id] = { skeleton: rig.skeleton, legSwing: rig.legSwing, parts: rig.parts.map((p) => ({ name: p.name, parent: p.parent, pivot: p.pivot, key: `${id}/${p.name}` })) };
         for (const p of rig.parts) items.push({ key: `${id}/${p.name}`, im: sheet, sx: p.rect[0], sy: p.rect[1], w: p.rect[2], h: p.rect[3], ax: p.pivot[0] - p.off[0], ay: p.pivot[1] - p.off[1], ppu: e.ppu || 75 });
       } catch (err) { console.warn('ArtAtlas: rig failed for', id, err); }
     }));

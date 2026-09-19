@@ -219,7 +219,7 @@ export class Renderer {
     // thin team-coloured rim: solid silhouettes offset by ~1.5 screen px behind the sprite
     const rim = 1.5 / this.ppu, tint = TEAM_TINT[u.team];
     for (const [ox, oy] of [[rim, 0], [-rim, 0], [0, rim], [0, -rim]]) ab.push(u.type.id, x + ox, y + oy, z - 0.002, { flip, rot: pose.rot, sx, sy, flash: 1, tint, alpha: 0.75 });
-    const flash = u.flash * 0.9;
+    const flash = u.flash * 0.6;   // big hand-drawn sprites need a softer hit flash
     const bodyTint = u.burn ? [1, 0.75, 0.55] : u.slow ? [0.75, 1, 0.75] : undefined;
     ab.push(u.type.id, x, y, z, { flip, rot: pose.rot, sx, sy, flash, tint: bodyTint });
     if (u.anim === 'walk' && this.onDust && u.state !== 'flee') {
@@ -238,6 +238,7 @@ export class Renderer {
       anim: u.anim, state: u.state, phase: u.phase, phaseT: u.phaseT, windup: def.windup, recover: def.recover,
       animT: u.animT, speed: def.movementSpeed, time: this.time, seed: (u.id % 13) * 0.5, hit: u.hitStun > 0 && u.state !== 'attack', style: attackStyle(def.look.weapon),
     });
+    if (rig.legSwing != null) { pose.angles.legF *= rig.legSwing; pose.angles.legB *= rig.legSwing; }   // robes sway less than legs
     let hop = u.spawnT > 0 ? Math.sin((0.35 - u.spawnT) / 0.35 * Math.PI) * 0.35 : 0;
     if (u.state === 'cheer') hop = Math.abs(Math.sin(u.cheerT * 7)) * 0.5;
     const jitter = u.hitStun > 0 ? (Math.random() - 0.5) * 0.12 : 0;
@@ -259,7 +260,7 @@ export class Renderer {
       return (world[p.name] = w);
     };
     const rim = 1.5 / this.ppu, tint = TEAM_TINT[u.team];
-    const flash = u.flash * 0.9;
+    const flash = u.flash * 0.6;   // big hand-drawn sprites need a softer hit flash
     const bodyTint = u.burn ? [1, 0.75, 0.55] : u.slow ? [0.75, 1, 0.75] : undefined;
     for (const p of rig.parts) { const w = place(p); for (const [ox, oy] of [[rim, 0], [-rim, 0], [0, rim], [0, -rim]]) ab.push(p.key, w.x + ox, w.y + oy, z - 0.002, { flip, rot: w.ang, flash: 1, tint, alpha: 0.75, scale: sc }); }
     for (const p of rig.parts) { const w = world[p.name]; ab.push(p.key, w.x, w.y, z, { flip, rot: w.ang, flash, tint: bodyTint, scale: sc }); }
@@ -301,7 +302,7 @@ export class Renderer {
       if (u.state === 'cheer') hop = Math.abs(Math.sin(u.cheerT * 7)) * 0.5;
       const hover = look.body === 'flyer' ? 0.3 + Math.sin(this.time * 4 + u.id) * 0.12 : 0;
       const jitter = u.hitStun > 0 ? (Math.random() - 0.5) * 0.12 : 0;
-      const flash = u.flash * 0.9;
+      const flash = u.flash * 0.6;   // big hand-drawn sprites need a softer hit flash
       const tint = u.burn ? [1, 0.75, 0.55] : u.slow ? [0.75, 1, 0.75] : undefined;
       b.push(key, u.x + jitter, u.y + hop + hover, z, { flip, flash, scale: sc, tint });
       // marching dust
