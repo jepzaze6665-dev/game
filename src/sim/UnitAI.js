@@ -229,7 +229,7 @@ function endgameBehaviour(battle, u, dt) {
   }
   u.state = 'flee'; u.anim = 'walk'; u.animT += dt;
   u.vx = -u.dir * u.type.movementSpeed * 1.4; u.vy = (u.laneY - u.y) * 0.5;
-  if (Math.abs(u.x) > 24) { u.state = 'dead'; u.deadT = 10; }
+  if (Math.abs(u.x) > BASE_STATS.x + 2.5) { u.state = 'dead'; u.deadT = 10; }
 }
 
 // Auras and formation are recomputed a few times per second for all units.

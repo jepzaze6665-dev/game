@@ -2,7 +2,7 @@
 // by gold value, scores every unit by how well it counters (and is countered
 // by) that army, keeps a sensible frontline/backline mix, saves for expensive
 // answers, times pushes and makes deliberate mistakes on lower difficulties.
-import { UNITS, TEAM } from '../data/units.js';
+import { UNITS, TEAM, BASE_STATS } from '../data/units.js';
 import { counterMultiplier, armorFactor } from './Combat.js';
 
 export const DIFFICULTIES = {
@@ -52,7 +52,7 @@ export class EnemyAI {
     let near = 0, mine = 0;
     for (const u of b.units) {
       if (u.state === 'dead') continue;
-      if (u.x * sign > 10) { if (u.team === this.team) mine++; else near++; }
+      if (u.x * sign > BASE_STATS.x - 12) { if (u.team === this.team) mine++; else near++; }
     }
     return near > mine + 2;
   }

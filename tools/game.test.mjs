@@ -20,6 +20,8 @@ test('purchases reserve full squads and reject cooldown, foreign units and overs
   const gold = b.gold[0]; assert.equal(b.spawnSquad(0, id), null);
   assert.equal(b.gold[0], gold - d.cost); assert.equal(b.pendingCount(0), d.squad);
   assert.equal(b.spawnSquad(0, id), 'cooldown'); assert.equal(b.spawnSquad(0, RACE_UNITS.robot[0]), 'locked');
+  // bought squads wait for the wave clock, then muster together
+  assert.equal(b.counts[0], 0); b.tick(ECONOMY.waveEvery + 0.01); for (let i = 0; i < 90; i++) b.tick(1 / 60); assert.equal(b.counts[0], d.squad);
   b.cooldowns[0] = {}; b.gold[0] = 999; b.counts[0] = ECONOMY.maxUnitsPerTeam - b.pendingCount(0) - 1;
   assert.equal(b.spawnSquad(0, id), 'full'); b.counts[0] = 0; b.gold[0] = 0; assert.equal(b.spawnSquad(0, id), 'gold');
 });

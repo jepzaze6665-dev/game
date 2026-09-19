@@ -23,10 +23,12 @@ export class Game {
     this.audio = new Audio(this.settings);
     this.hud = new HUD(uiRoot, this.renderer.atlas, {
       deploy: (id) => this.deploy(id),
+      lookAt: (x) => this.renderer.lookAt(x),
       pause: () => this.pause(),
       toggleSpeed: () => this.toggleSpeed(),
       toggleSound: () => this.toggleSound(),
     });
+    this.hud.cam = () => ({ x: this.renderer.camX, halfW: this.renderer.worldWidth / 2 });
     this.menus = new Menus(uiRoot, this.renderer.atlas, this.prog, {
       click: () => this.audio.play('click'),
       startCampaign: (stage) => this.pickRaceThen({ stage }),
@@ -263,6 +265,7 @@ export class Game {
         case 'overtime': this.hud.showBanner('OVERTIME', 'warn', `${ev.mult}x income · siege damage rising`, 2200); break;
         case 'siege': this.hud.showBanner('GATES ARE CRUMBLING', 'warn', 'Both bases lose health. Land the finishing blow!', 3000); break;
         case 'spawn': this.audio.play('spawn'); break;
+        case 'wave': if (ev.team === TEAM.PLAYER && ev.count) this.hud.showBanner('WAVE ' + ev.wave, 'gold', ev.count + ' units march', 900); break;
         case 'melee': this.audio.play(ev.base ? 'hit' : 'sword', { volume: ev.base ? 0.8 : 0.6 }); break;
         case 'hit': if (ev.counter) this.audio.play('counter', { volume: 0.5 }); if (ev.charge) this.audio.play('charge'); this.audio.play('hit', { volume: 0.5 }); break;
         case 'death': this.audio.play(ev.big ? 'bigDeath' : 'death', { volume: 0.6 }); break;

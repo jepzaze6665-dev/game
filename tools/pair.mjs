@@ -14,7 +14,7 @@ for (let g = 0; g < n; g++) {
   const flip = g % 2; const pa = flip ? B : A, pb = flip ? A : B;
   const b = new Battle({ playerRace: pa, enemyRace: pb });
   const a1 = new EnemyAI(b, diff, null, 0), a2 = new EnemyAI(b, diff, null, 1); const dt = 1 / 30;
-  while (!b.result && b.time < 720) { b.update(dt); if (Math.floor(g / 2) % 2) { a2.update(dt); a1.update(dt); } else { a1.update(dt); a2.update(dt); } b.events.length = 0; }
+  while (!b.result && b.time < 1300) { b.update(dt); if (Math.floor(g / 2) % 2) { a2.update(dt); a1.update(dt); } else { a1.update(dt); a2.update(dt); } b.events.length = 0; }
   const winner = b.result && b.result.winner !== null ? (b.result.winner === 0 ? pa : pb) : null;
   if (winner === A) wa++; else if (winner === B) wb++;
   times.push(b.time);

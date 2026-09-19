@@ -6,7 +6,7 @@ import { ArtAtlas } from './ArtAtlas.js';
 import { SpriteBatch } from './SpriteBatch.js';
 import { Ground } from './Ground.js';
 import { Weather } from './Weather.js';
-import { TEAM, LANE } from '../data/units.js';
+import { TEAM, LANE, BASE_STATS } from '../data/units.js';
 import { unitCell } from '../art/rig.js';
 import { SKELETONS, attackStyle } from '../art/skeletons.js';
 import { PROJECTILES } from '../sim/Projectiles.js';
@@ -52,6 +52,8 @@ export class Renderer {
     this.insets = { top: 0, bottom: 0 };
     this.time = 0;
     this.camOffsetY = 0;
+    // horizontal camera: follows the front line unless the player scrolls
+    this.camX = 0; this.follow = true; this.manualT = 0;
     this.resize();
   }
 
@@ -80,6 +82,12 @@ export class Renderer {
     this.camOffsetY = (freeCenter - H / 2) / (this.ppu * s);
     this.worldWidth = wu; this.worldHeight = hu;
   }
+
+  // furthest the camera may travel so a base always stays on screen
+  camLimit() { return Math.max(0, BASE_STATS.x + 5 - this.worldWidth / 2); }
+  scrollBy(dx) { this.camX = Math.max(-this.camLimit(), Math.min(this.camLimit(), this.camX + dx)); this.follow = false; this.manualT = 0; }
+  lookAt(x) { this.camX = Math.max(-this.camLimit(), Math.min(this.camLimit(), x)); this.follow = false; this.manualT = 0; }
+  recenter() { this.follow = true; }
 
   worldToScreen(x, y) {
     const W = window.innerWidth, H = window.innerHeight;
@@ -127,7 +135,9 @@ export class Renderer {
     b.end(); this.artBatch.end();
     let sx = 0, sy = 0;
     if (effects) { sx = Math.round(effects.shakeX * 4) / this.ppu; sy = Math.round(effects.shakeY * 4) / this.ppu; }
-    this.camera.position.x = sx;
+    if (!this.follow) { this.manualT += dt; if (this.manualT > 8) this.follow = true; }   // drift back to the action after a while
+    if (this.follow && battle) { const lim = this.camLimit(); const target = Math.max(-lim, Math.min(lim, battle.frontline)); this.camX += (target - this.camX) * Math.min(1, dt * 1.5); }
+    this.camera.position.x = this.camX + sx;
     this.camera.position.y = this.camOffsetY + sy;
     this.renderer.render(this.scene, this.camera);
   }

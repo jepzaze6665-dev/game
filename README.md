@@ -31,5 +31,8 @@ No build step. `vendor/three.module.js` + `vendor/three.core.js` are the only de
 - `progress/index.html` — live development progress page
 - `docs/graphic-bible.html` — art, animation and UI standard, rendered live from the game code (palettes, every sprite, HUD kit, crowd tests)
 
+## Battle rules (current)
+Units bought during a wave muster at the gate and march together every 10 s (both sides). Bases sit 84 units apart (about 1.5 screens; the camera follows the front line - drag, wheel, A/D, Space to re-follow, minimap click). Siege damage rises at 6:00, both gates crumble from 12:00, 20-minute cap.
+
 ## Debug
 Add `?bg=1` to keep the simulation running when the tab is hidden. `window.GAME` exposes `startBattle`, `deploy`, `autoplay`, `menus`, `speed`.

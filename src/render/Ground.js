@@ -1,6 +1,6 @@
 // Procedural top-down pixel terrain: one canvas texture per battlefield theme.
 import * as THREE from '../../vendor/three.module.js';
-import { LANE } from '../data/units.js';
+import { LANE, BASE_STATS } from '../data/units.js';
 
 export const THEMES = {
   meadow: {
@@ -130,7 +130,7 @@ export class Ground {
       }
     }
     // cobbled courtyards in front of each base
-    for (const bx of [this.px(-23), this.px(18)]) {
+    for (const bx of [this.px(-BASE_STATS.x - 1.5), this.px(BASE_STATS.x - 3.5)]) {
       for (let y = laneTop; y < laneBot; y += 3) for (let x = bx; x < bx + 5 * ppu; x += 4) {
         const off = ((y / 3) % 2) ? 2 : 0;
         if (rnd() < 0.85) { ctx.fillStyle = t.stone[rnd() < 0.5 ? 0 : 1]; ctx.fillRect(x + off, y, 3, 2); }
