@@ -3,7 +3,7 @@
 // by) that army, keeps a sensible frontline/backline mix, saves for expensive
 // answers, times pushes and makes deliberate mistakes on lower difficulties.
 import { UNITS, TEAM } from '../data/units.js';
-import { counterMultiplier } from './Combat.js';
+import { counterMultiplier, armorFactor } from './Combat.js';
 
 export const DIFFICULTIES = {
   easy:   { name: 'Easy',   openingDelay: 8,   thinkEvery: 1.6, mistake: 0.35, saveChance: 0.15, incomeScale: 0.7,  damageScale: 0.85,  aggression: 0.7, desc: 'A relaxed commander. Slow to react, spends carelessly.' },
@@ -87,8 +87,8 @@ export class EnemyAI {
         s -= (counterMultiplier(fdef, { type: def }) - 1) * 3.5 * share; // they counter us
         // armour matters: how much of our damage actually lands, and how much of theirs we shrug off
         const physical = (d) => (d.damageType === 'physical' || d.damageType === 'pierce') && !d.armorPiercing;
-        if (physical(def) && fdef.armor > 0) s += (Math.max(0.45, 1 - fdef.armor / def.damage) - 1) * 3.0 * share;
-        if (physical(fdef) && def.armor > 0) s += (1 - Math.max(0.45, 1 - def.armor / fdef.damage)) * 2.0 * share;
+        if (physical(def) && fdef.armor > 0) s += (armorFactor(def.damage, fdef.armor) - 1) * 3.0 * share;
+        if (physical(fdef) && def.armor > 0) s += (1 - armorFactor(fdef.damage, def.armor)) * 2.0 * share;
       }
       // keep a frontline in front of the ranged backline
       if (def.projectile && frontline < ranged * 1.2) s -= 0.9;
@@ -132,14 +132,22 @@ export class EnemyAI {
     // Waves: bank gold until a wave budget is reached, then spend it in one burst
     // (best-scored units first) so squads arrive together instead of trickling in.
     const minutes = b.time / 60;
-    const budget = this.pers.wave * (1 + Math.min(1.5, minutes * 0.2));
+    const budget = this.pers.wave * (1 + Math.min(1.0, minutes * 0.2));
     const critical = this.underSiege();
     const mineN = b.counts[this.team] + b.pendingCount(this.team);
-    if (gold < budget && !critical && !(mineN < 3 && b.time > 8)) { this.lastDecision = 'bank'; return; }
-    if (critical || (mineN < 3 && b.time > 8)) {
-      const affordable = ranked.find((id) => UNITS[id].cost <= gold);
-      if (affordable) { b.spawnSquad(this.team, affordable); this.lastDecision = 'emergency:' + affordable; }
-      if (gold < budget) return;
+    const empty = mineN < 3 && b.time > 8;
+    if (gold < budget && !critical && !empty) { this.lastDecision = 'bank'; return; }
+    if (critical || empty) {
+      // Trickling single squads into a winning army only feeds it. Bank at
+      // least half a wave and answer with a burst - unless the gate is about to fall.
+      const base = b.bases[this.team];
+      const desperate = base.hp < base.maxHp * 0.35;
+      if (gold < budget * 0.5 && !desperate) { this.lastDecision = 'regroup'; return; }
+      if (gold < budget) {
+        let bought = 0;
+        for (const id of ranked) { if (UNITS[id].cost <= b.gold[this.team] && !b.spawnSquad(this.team, id)) { bought++; this.lastDecision = 'emergency:' + id; } if (bought >= 4 || b.gold[this.team] < 35) break; }
+        return;
+      }
     }
     // spend the wave: walk the ranking, buying each pick at most twice
     let bought = 0;

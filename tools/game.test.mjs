@@ -37,7 +37,10 @@ test('armor blocks physical damage, specialist bypass and tag counters work', ()
   v.type = { ...v.type, armor: 12 };
   const physical = applyDamage(b, a, v); v.hp = v.maxHp;
   a.type = { ...a.type, armorPiercing: true }; assert.ok(applyDamage(b, a, v) > physical);
-  assert.ok(counterMultiplier({ strongAgainst: ['ARMORED'], bonus: 1.5 }, v) > 1);
+  assert.ok(counterMultiplier({ strongAgainst: ['ARMORED'], bonus: 1.5 }, b.makeUnit(1, 'r_tank', 0, 0)) > 1);
+  // a victim's listed weaknesses are real, and race-wide tags give only a small bonus
+  assert.ok(counterMultiplier({ strongAgainst: [], counterTags: ['MAGIC'] }, v) > 1);
+  assert.ok(counterMultiplier({ strongAgainst: ['UNDEAD'], bonus: 2 }, b.makeUnit(1, 'm_mummy', 0, 0)) < 1.5);
 });
 test('zero income is honored and summoned units obey capacity', () => {
   const b = new Battle({ playerIncomeScale: 0, enemyIncomeScale: 0 });
@@ -51,6 +54,9 @@ test('time limit handles a draw and a healthier-base victory without later damag
     const hp = b.bases[1].hp; applyDamage(b, b.makeUnit(0, 'h_swordsman', 0, 0), b.bases[1]); assert.equal(b.bases[1].hp, hp);
     assert.equal(b.spawnSquad(0, 'h_squire'), 'over');
   }
+  // equal gates: the side with the stronger surviving army takes it
+  const b = new Battle(); b.spawnUnitAt(1, 'h_knight', 5, 0, true); b.time = ECONOMY.timeLimit - .01; b.tick(.02);
+  assert.equal(b.result.winner, 1); assert.ok(b.result.tiebreak);
 });
 test('health-bar rectangles keep world dimensions when converted to pixels', () => {
   let args; SpriteBatch.prototype.rect.call({ ppu: 12, push: (...a) => { args = a; } }, 1, 2, 2.6, 1.5, .25, [1, 0, 0]);

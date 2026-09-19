@@ -4,7 +4,7 @@ import { HUMAN_UNITS } from './roster/human.js';
 import { DEMON_UNITS } from './roster/demon.js';
 import { ROBOT_UNITS } from './roster/robot.js';
 import { MUMMY_UNITS } from './roster/mummy.js';
-import { normalise } from './balance.js';
+import { normalise, setRosterLookup } from './balance.js';
 export { RACES, RACE_ORDER, TAGS } from './races.js';
 
 export const TEAM = { PLAYER: 0, ENEMY: 1 };
@@ -18,6 +18,8 @@ export const RACE_UNITS = {
 
 export const UNITS = {};
 for (const list of [HUMAN_UNITS, DEMON_UNITS, ROBOT_UNITS, MUMMY_UNITS]) for (const u of list) UNITS[u.id] = u;
+
+setRosterLookup((id) => UNITS[id]);   // summon prices use raw roster costs (normalise never changes cost)
 
 // Deployment hotkeys for the 12 slots
 export const HOTKEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='];

@@ -10,7 +10,7 @@ node tools/serve.mjs 8765
 No build step. `vendor/three.module.js` + `vendor/three.core.js` are the only dependency (copied from `node_modules/three/build`).
 
 ## Structure
-- `src/data/` — unit roster, economy, lane geometry, campaign stages (pure data)
+- `src/data/` — unit roster, economy, lane geometry, campaign stages (pure data); `balance.js` tier curve + race power, `tuning.js` per-unit overrides
 - `src/art/` — procedural pixel-art: unit rig, effects, bases (`PixelBuffer` software canvas)
 - `src/sim/` — battle simulation: units, AI, combat, projectiles, spatial grid, enemy commander
 - `src/render/` — ThreeJS pixel renderer: atlas, instanced sprite batch, terrain, effects, weather
@@ -21,6 +21,7 @@ No build step. `vendor/three.module.js` + `vendor/three.core.js` are the only de
 
 ## Tools
 - `tools/simulate.mjs N raceA raceB diffA diffB` — headless AI-vs-AI balance runs
+- `tools/pair.mjs raceA raceB [games] [difficulty]` — one seeded matchup; `VERBOSE=1` breaks down how games end, `MUTATE=file.mjs` patches data before the run
 - `npm test` — simulation and data regression tests
 - `npm run test:browser` — real browser interaction and mobile layout checks (start the server first)
 - `npm run test:balance` — seeded full race matrix

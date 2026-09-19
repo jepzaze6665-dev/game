@@ -123,8 +123,15 @@ export class Battle {
   tick(dt) {
     this.time += dt;
     if (!this.result && this.time >= ECONOMY.timeLimit) {
+      // Healthier base wins; with equal gates the stronger surviving army takes it.
       const lead = this.bases[0].hp / this.bases[0].maxHp - this.bases[1].hp / this.bases[1].maxHp;
-      this.result = { winner: Math.abs(lead) < 0.00001 ? null : lead > 0 ? 0 : 1, time: ECONOMY.timeLimit, reason: 'time' };
+      let winner = Math.abs(lead) < 0.00001 ? null : lead > 0 ? 0 : 1, tiebreak = false;
+      if (winner === null) {
+        const army = [0, 0];
+        for (const u of this.units) if (u.state !== 'dead') army[u.team] += UNITS[u.type.id].cost / UNITS[u.type.id].squad * u.hp / u.maxHp;
+        if (Math.abs(army[0] - army[1]) > 1) { winner = army[0] > army[1] ? 0 : 1; tiebreak = true; }
+      }
+      this.result = { winner, time: ECONOMY.timeLimit, reason: 'time', tiebreak };
       this.spawnQueue.length = 0;
     }
     // Late siege weakens both gates equally, but a unit must land the final hit.

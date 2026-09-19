@@ -248,7 +248,7 @@ export class Game {
       }
     }
     this.state = 'results';
-    if (b.result.reason === 'time') hintText = draw ? 'Time limit reached. Equal base health: a draw. Try more siege pressure.' : 'Time limit reached. The healthier base wins.';
+    if (b.result.reason === 'time') hintText = draw ? 'Time limit reached. Equal base health and equal armies: a draw. Try more siege pressure.' : b.result.tiebreak ? 'Time limit reached with equal base health. The stronger surviving army wins.' : 'Time limit reached. The healthier base wins.';
     this.hud.hide();
     this.menus.results({ won, draw, stars, time: b.result.time, kills: st.kills, lost: st.lost, spent: st.spent, deployed: st.deployed, favourite: mvpId ? UNITS[mvpId].name : null, mvpId, mvpN, next, hintText, race: b.races[0], enemyRace: b.races[1] });
   }
@@ -326,7 +326,7 @@ export class Game {
             this.endBanner = true;
             const won = this.battle.result.winner === TEAM.PLAYER;
             const timed = this.battle.result.reason === 'time';
-            this.hud.showBanner(timed ? 'TIME LIMIT' : won ? 'ENEMY BASE DESTROYED!' : 'YOUR BASE HAS FALLEN!', won ? 'gold big' : 'warn big', timed ? 'Healthier base wins · Equal health is a draw' : '', 3000);
+            this.hud.showBanner(timed ? 'TIME LIMIT' : won ? 'ENEMY BASE DESTROYED!' : 'YOUR BASE HAS FALLEN!', won ? 'gold big' : 'warn big', timed ? (this.battle.result.tiebreak ? 'Equal base health · Stronger army wins' : 'Healthier base wins') : '', 3000);
             setTimeout(() => this.audio.play(won ? 'victory' : 'defeat'), 900);
           }
           if (this.ending > 3.2) { this.endBanner = false; this.finishBattle(); }

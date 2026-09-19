@@ -305,7 +305,7 @@ export class Menus {
     head.appendChild(el('h2', null, 'HOW TO PLAY'));
     head.appendChild(btn(onDone ? 'SKIP' : 'BACK', 'small ghost', () => onDone ? onDone() : this.title()));
     p.appendChild(head);
-    p.appendChild(el('p', 'muted', 'Siege damage rises at 5:00. Both gates crumble at 7:00. At 8:00 the healthier base wins; equal health is a draw.'));
+    p.appendChild(el('p', 'muted', 'Siege damage rises at 5:00. Both gates crumble at 7:00. At 8:00 the healthier base wins; with equal health the stronger surviving army wins.'));
     const steps = el('div', 'howto-steps');
     const step = (n, title, text, art) => {
       const d = el('div', 'howto-step');
