@@ -1,7 +1,24 @@
 // Helpers that draw atlas frames into HUD canvases at crisp integer scales.
 import { TEAM } from '../data/units.js';
 
+// Hand-drawn art (when the unit has some) is drawn smooth into a square box.
+export function artIcon(art, id, box, flip = false) {
+  const f = art.frame(id);
+  const c = document.createElement('canvas');
+  c.width = box; c.height = box;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  const fit = Math.min(box / f.w, box / f.h);
+  const w = f.w * fit, h = f.h * fit;
+  if (flip) { ctx.translate(box, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(art.canvas, f.x, f.y, f.w, f.h, (box - w) / 2, box - h, w, h);
+  c.style.width = box + 'px'; c.style.height = box + 'px'; c.style.imageRendering = 'auto';
+  c.dataset.scale = 1;
+  return c;
+}
+
 export function unitIcon(atlas, id, team = TEAM.PLAYER, scale = 2, frame = 'idle', flip = false) {
+  if (atlas.art && atlas.art.has(id)) return artIcon(atlas.art, id, 32 * scale, flip);
   const f = atlas.frame(`${id}_${team}_${frame}`);
   const c = document.createElement('canvas');
   c.width = f.w * scale; c.height = f.h * scale;
@@ -15,6 +32,7 @@ export function unitIcon(atlas, id, team = TEAM.PLAYER, scale = 2, frame = 'idle
 
 // Cropped icon: trims the empty cell padding so the unit fills a square box.
 export function unitIconFit(atlas, id, team, box, frame = 'idle', flip = false) {
+  if (atlas.art && atlas.art.has(id)) return artIcon(atlas.art, id, box, flip);
   const f = atlas.frame(`${id}_${team}_${frame}`);
   const b = trimBounds(atlas, f);
   const fit = box / Math.max(b.w, b.h);
@@ -62,16 +80,30 @@ export function animatedUnit(atlas, canvas, id, team, scale, flip = false) {
   const ctx = canvas.getContext('2d');
   let t = 0, raf = 0, last = performance.now(), stopped = false;
   const frames = ['walk0', 'walk1', 'walk2', 'walk3'];
+  const art = atlas.art && atlas.art.has(id) ? atlas.art : null;
   const draw = (now) => {
     if (stopped) return;
     t += (now - last) / 1000; last = now;
     if (!Number.isFinite(t)) t = 0;
-    const index = ((Math.floor(t * 7) % frames.length) + frames.length) % frames.length;
-    const f = atlas.frame(`${id}_${team}_${frames[index]}`);
-    ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     if (flip) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+    if (art) {
+      // paper-doll bob for hand-drawn art
+      const f = art.frame(id);
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      const fit = Math.min(canvas.width / f.w, (canvas.height - 6) / f.h);
+      const ph = t * 7, bob = Math.abs(Math.sin(ph)) * 4, sy = 1 + Math.sin(ph * 2) * 0.02;
+      const w = f.w * fit, h = f.h * fit * sy;
+      ctx.translate(canvas.width / 2, canvas.height - 2 - bob); ctx.rotate(Math.sin(ph) * 0.05);
+      ctx.drawImage(art.canvas, f.x, f.y, f.w, f.h, -w / 2, -h, w, h);
+      ctx.restore();
+      if (!stopped) raf = requestAnimationFrame(draw);
+      return;
+    }
+    const index = ((Math.floor(t * 7) % frames.length) + frames.length) % frames.length;
+    const f = atlas.frame(`${id}_${team}_${frames[index]}`);
+    ctx.imageSmoothingEnabled = false;
     const fit = Math.min(scale, canvas.width / f.w, canvas.height / f.h);
     const dx = Math.floor((canvas.width - f.w * fit) / 2), dy = Math.floor((canvas.height - f.h * fit) / 2);
     ctx.drawImage(atlas.canvas, f.x, f.y, f.w, f.h, dx, dy, f.w * fit, f.h * fit);

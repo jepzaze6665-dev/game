@@ -1,0 +1,17 @@
+{
+  "h_swordsman": {
+    "file": "human/h_swordsman.png",
+    "w": 105,
+    "h": 165,
+    "ax": 50,
+    "ay": 163,
+    "ppu": 75,
+    "src": "docs/human.jpg",
+    "box": [
+      478,
+      22,
+      618,
+      188
+    ]
+  }
+}
