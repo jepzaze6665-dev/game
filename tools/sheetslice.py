@@ -79,7 +79,7 @@ def is_bg(a, bg, tol):
     return grey | (np.abs(a - bg).max(axis=2) <= tol)
 
 
-def find_frames(a, bg, tol=26, min_h=34, min_area=500):
+def find_frames(a, bg, tol=26, min_h=40, min_area=1200):
     """Frames = bands of rows (separated by empty rows) split at empty columns."""
     diff = np.abs(a - bg).max(axis=2)
     fg = ~is_bg(a, bg, tol)
@@ -96,7 +96,9 @@ def find_frames(a, bg, tol=26, min_h=34, min_area=500):
     # drop small blobs: labels, sparkles, stray projectiles
     small = []
     for i, (x0, y0, x1, y1, n) in enumerate(components(fg), 1):
-        if (y1 - y0) <= 26 or n < 60: small.append(i)
+        w_, h_ = x1 - x0, y1 - y0
+        line = (w_ <= 3 and h_ > 30) or (h_ <= 3 and w_ > 30)          # section borders
+        if h_ <= 26 or n < 60 or line: small.append(i)
     if small: fg &= ~np.isin(components.labels, small)
     rows = fg.sum(axis=1)
     bands = []; y = 0
@@ -213,6 +215,9 @@ def slice_sheet(src, uid, bands_spec=None, target=52, debug=False, tol=26):
         want = sum(int(c) for _, c in parts)
         bx = split_to_count(fg, band['boxes'], want)
         if len(bx) != want: print(f"  warning: band at y={band['y0']} has {len(bx)} frames, expected {want}")
+        widths = sorted(b[2] - b[0] for b in bx); med = widths[len(widths) // 2]
+        for b in bx:
+            if b[2] - b[0] < med * 0.4: print(f"  warning: suspicious narrow frame at x={b[0]} y={band['y0']} ({b[2] - b[0]}px wide) - check the frame counts for {[n for n, _ in parts]}")
         i = 0
         for name, count in parts:
             count = int(count)
@@ -243,8 +248,14 @@ def slice_sheet(src, uid, bands_spec=None, target=52, debug=False, tol=26):
         w2, h2 = max(1, round(img.width / factor)), max(1, round(img.height / factor))
         small = img.resize((w2, h2), Image.BOX)
         arr = np.asarray(small).copy(); al = arr[..., 3] > 110
-        arr[..., 3] = np.where(al, 255, 0)
         if not al.any(): continue
+        # drop stray fragments: keep the main body and anything sizeable or touching it
+        comps = components(al); labels = components.labels
+        if len(comps) > 1:
+            main = max(range(len(comps)), key=lambda i: comps[i][4]); mx0, my0, mx1, my1, mn = comps[main]
+            drop = [i + 1 for i, c in enumerate(comps) if i != main and c[4] < mn * 0.04 and (c[2] < mx0 - 3 or c[0] > mx1 + 3 or c[3] < my0 - 3 or c[1] > my1 + 3)]
+            if drop: al &= ~np.isin(labels, drop)
+        arr[..., 3] = np.where(al, 255, 0)
         yy, xx = np.where(al)
         x0, y0, x1, y1 = xx.min(), yy.min(), xx.max() + 1, yy.max() + 1
         arr = arr[y0:y1, x0:x1]

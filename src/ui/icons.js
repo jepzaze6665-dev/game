@@ -9,8 +9,19 @@ export function artIcon(art, id, box, flip = false) {
   const ctx = c.getContext('2d');
   const pixel = !!art.anims[id];
   ctx.imageSmoothingEnabled = !pixel; ctx.imageSmoothingQuality = 'high';
+  if (pixel) {
+    // portrait: the upper part of the idle frame (head + shoulders) at an integer scale
+    const ph = Math.round(f.h * 0.62), pw = Math.min(f.w, Math.round(ph * 1.1));
+    const sx = f.x + Math.round((f.w - pw) / 2), sy = f.y;
+    let fit = Math.min(box / pw, box / ph); fit = fit >= 1 ? Math.floor(fit) : fit;
+    const w = Math.round(pw * fit), h = Math.round(ph * fit);
+    if (flip) { ctx.translate(box, 0); ctx.scale(-1, 1); }
+    ctx.drawImage(art.canvas, sx, sy, pw, ph, Math.round((box - w) / 2), Math.round((box - h) / 2), w, h);
+    c.style.width = box + 'px'; c.style.height = box + 'px'; c.style.imageRendering = 'pixelated';
+    c.dataset.scale = 1;
+    return c;
+  }
   let fit = Math.min(box / f.w, box / f.h);
-  if (pixel) fit = fit >= 1 ? Math.floor(fit) : fit;     // integer upscale keeps pixels square
   const w = f.w * fit, h = f.h * fit;
   if (flip) { ctx.translate(box, 0); ctx.scale(-1, 1); }
   ctx.drawImage(art.canvas, f.x, f.y, f.w, f.h, (box - w) / 2, box - h, w, h);

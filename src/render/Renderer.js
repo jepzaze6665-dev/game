@@ -372,10 +372,11 @@ export class Renderer {
       if (u.hp < u.maxHp) {
         const w = barW;
         const yb = top + 0.05;
-        b.rect(u.x - w / 2 - 1 / PPU, yb - 1 / PPU, 2.5, w + 2 / PPU, 5 / PPU, [0.1, 0.06, 0.15], 0.9);
-        b.rect(u.x - w / 2, yb, 2.6, w * Math.max(0, u.hp / u.maxHp), 3 / PPU, TEAM_LIGHT[u.team]);
+        const px = 1 / this.ppu;   // one screen pixel in world units, so bars stay thin at any scale
+        b.rect(u.x - w / 2 - px, yb - px, 2.5, w + 2 * px, 5 * px, [0.1, 0.06, 0.15], 0.9);
+        b.rect(u.x - w / 2, yb, 2.6, w * Math.max(0, u.hp / u.maxHp), 3 * px, TEAM_LIGHT[u.team]);
         let ix = u.x - w / 2;
-        const icon = (k) => { b.push(k, ix, yb + 0.55, 2.7, { ax: 0, ay: 0 }); ix += 0.55; };
+        const icon = (k) => { b.push(k, ix, yb + 7 * px, 2.7, { ax: 0, ay: 0 }); ix += 0.45; };
         if (u.burn) icon('ico_burn');
         if (u.slow) icon('ico_slow');
         if (u.stunT > 0) icon('ico_stun');
