@@ -75,10 +75,15 @@ export class EnemyAI {
     const totalM = Object.values(mineComp).reduce((a, c) => a + c, 0);
     let frontline = 0, ranged = 0;
     for (const id in mineComp) { const d = UNITS[id]; if (d.projectile) ranged += mineComp[id]; else frontline += mineComp[id] * (d.mass >= 5 ? 3 : 1); }
+    // how much of the enemy army is area/chain fire: fragile melee waves melt walking into it
+    let fireShare = 0;
+    for (const fid in foe.w) { const f = UNITS[fid]; if (f.projectile && (f.splash || f.chain || f.multishot || f.pierceLine)) fireShare += foe.w[fid]; }
     const scores = {};
     this.roster.forEach((id, i) => {
       const def = UNITS[id];
       let s = 1;
+      if (!def.projectile && def.hp < 220 && !(def.armor >= 5)) s -= 2.4 * fireShare;   // cheap melee: feed for splash lines
+      else if (def.projectile) s += 0.9 * fireShare;                                    // answer fire with fire
       for (const fid in foe.w) {
         const share = foe.w[fid];
         const fdef = UNITS[fid];

@@ -39,7 +39,7 @@ const CLAMP = { support: [0.85, 1.3], normal: [0.6, 1.6] };
 
 // Per-race power knob (applied on top of the tier curve) tuned with tools/matrix.mjs
 // so every race wins roughly half of its AI-vs-AI matches.
-export const RACE_POWER = { human: 0.98, demon: 1.07, robot: 0.88, mummy: 1.04 };
+export const RACE_POWER = { human: 0.99, demon: 1.05, robot: 0.895, mummy: 1.03 };
 
 export function normalise(unit, tierIndex) {
   const target = TIER_VALUE[tierIndex] * (RACE_POWER[unit.race] || 1);
