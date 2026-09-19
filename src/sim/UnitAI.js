@@ -1,7 +1,7 @@
 // Per-unit behaviour: targeting, marching, engaging, attacking, statuses and
 // passive/aura bookkeeping. Data driven: every decision reads the unit def.
 import { BASE_STATS, LANE } from '../data/units.js';
-import { applyDamage, splashDamage, lineDamage, healUnit, killUnit, rageSpeedMultiplier } from './Combat.js';
+import { applyDamage, splashDamage, lineDamage, healUnit, killUnit, rageSpeedMultiplier, counterMultiplier } from './Combat.js';
 import { fireProjectile } from './Projectiles.js';
 
 const ACQUIRE_PAD = 2.2;
@@ -38,7 +38,16 @@ function baseInReach(battle, u) {
   return u.dir > 0 ? u.x >= edge : u.x <= edge;
 }
 
-function beginAttack(u) { u.state = 'attack'; u.phase = 'windup'; u.phaseT = 0; u.anim = 'atk'; u.animT = 0; }
+// Starts a swing. `u.swing` tells the renderer which animation fits: a charge
+// hit, a counter ("heavy") hit, or alternating main/alt swings. Pure cosmetics.
+function beginAttack(u) {
+  u.state = 'attack'; u.phase = 'windup'; u.phaseT = 0; u.anim = 'atk'; u.animT = 0;
+  u.swings = (u.swings || 0) + 1;
+  const def = u.type, tgt = u.target;
+  if (def.chargeBonus && u.chargeDist > 3.5) u.swing = 'charge';
+  else if (tgt && !u.attackingBase && counterMultiplier(def, tgt) > 1.01) u.swing = 'heavy';
+  else u.swing = u.swings % 2 ? 'main' : 'alt';
+}
 
 function resolveHit(battle, u) {
   const def = u.type;

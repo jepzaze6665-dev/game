@@ -196,16 +196,24 @@ export class Renderer {
     if (u.state === 'dead') { const d = anims.death || anims.hurt || anims.idle; return pick(d, u.deadT / 0.7 * d.length); }
     if (u.state === 'downed') { const d = anims.death || anims.hurt || anims.idle; return d[Math.min(d.length - 1, Math.floor(d.length * 0.6))]; }
     if (u.anim === 'atk' && anims.atk) {
-      const a = anims.atk, split = Math.max(1, Math.round(a.length * 0.45));
+      // charge hits, counter hits and every second swing use the sheet's extra attacks when it has them
+      const a = (u.swing === 'charge' && (anims.charge || anims.atk3)) || (u.swing === 'heavy' && (anims.heavy || anims.atk2)) || (u.swing === 'alt' && anims.atk2) || anims.atk;
+      const split = Math.max(1, Math.round(a.length * 0.45));
       if (u.phase === 'windup') return pick(a, u.phaseT / Math.max(0.05, u.type.windup) * split);
       return pick(a, split + u.phaseT / Math.max(0.05, u.type.recover) * (a.length - split));
     }
-    if (u.stunT > 0 || (u.hitStun > 0 && u.state !== 'attack')) { const h = anims.hurt || anims.idle; return pick(h, (1 - u.flash) * h.length); }
+    if (u.stunT > 0 || (u.hitStun > 0 && u.state !== 'attack')) {
+      // shielded units and tower shields take arrows in a block pose
+      if (anims.block && (u.shieldT > 0 || (u.type.rangedResist && u.lastHitRanged))) return pick(anims.block, (1 - u.flash) * anims.block.length);
+      const h = anims.hurt || anims.idle; return pick(h, (1 - u.flash) * h.length);
+    }
+    if (u.state === 'cheer' && anims.victory) return cyc(anims.victory, u.cheerT * 5);
     if (u.anim === 'walk' || u.state === 'flee') {
       const charging = u.chargeDist > 3.5 || u.state === 'flee';
-      const w = (charging && anims.run) || anims.walk || anims.idle;
+      const w = (charging && (anims.run || anims.charge)) || anims.walk || anims.idle;
       return cyc(w, u.animT * (8 + u.type.movementSpeed * 1.5));
     }
+    if (u.shieldT > 0 && anims.block) return cyc(anims.block, this.time * 5);
     const idle = anims.idle || anims.walk;
     return cyc(idle, this.time * 6 + (u.id % 7));
   }

@@ -96,6 +96,7 @@ export function applyDamage(battle, attacker, victim, extraMult = 1, opts = {}) 
   victim.flash = 1;
   victim.hitStun = Math.max(victim.hitStun, opts.stun || 0.05);
   victim.lastHitBy = attacker.team;
+  victim.lastHitRanged = ranged;
   if (opts.knockback) {
     const dir = Math.sign(victim.x - attacker.x) || attacker.dir;
     const k = opts.knockback / Math.max(0.5, victim.type.mass);
