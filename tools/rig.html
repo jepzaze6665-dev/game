@@ -35,7 +35,8 @@
 </aside>
 <main><canvas id="c"></canvas><canvas id="pv" style="margin-left:16px;vertical-align:top;background:#5fae4a"></canvas></main>
 <script type="module">
-import { SKELETONS } from '../src/art/skeletons.js';
+import { SKELETONS, attackStyle } from '../src/art/skeletons.js';
+import { UNITS } from '../src/data/units.js';
 const $ = (s) => document.querySelector(s);
 const COLORS = ['#ff6b6b', '#ffd23f', '#4fd062', '#38e0ff', '#b45cff', '#ff7a3d', '#93c5fd'];
 const BASE = '../assets/units/';
@@ -128,13 +129,14 @@ export function cutParts(img, rig) {
         const k = y * w + x; if (!hole[k] || filled[k]) continue;
         // average the filled neighbours, preferring lit pixels over the dark outline so the
         // fill takes the material colour instead of smearing black ink into the hole
-        let r = 0, g = 0, b = 0, n = 0, rd = 0, gd = 0, bd = 0, nd = 0;
+        let r = 0, g = 0, b = 0, n = 0, rd = 0, gd = 0, bd = 0, nd = 0, pick = -1;
         for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
           const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue; const nk = ny * w + nx; if (!filled[nk]) continue;
           const R = px[nk * 4], G = px[nk * 4 + 1], B = px[nk * 4 + 2];
-          if (R + G + B > 210) { r += R; g += G; b += B; n++; } else { rd += R; gd += G; bd += B; nd++; }
+          if (R + G + B > 210) { r += R; g += G; b += B; n++; if (pick < 0 || Math.random() < 1 / n) pick = nk; } else { rd += R; gd += G; bd += B; nd++; }
         }
-        if (n) { px[k * 4] = r / n; px[k * 4 + 1] = g / n; px[k * 4 + 2] = b / n; px[k * 4 + 3] = 255; next[k] = 1; changed++; }
+        // copy one lit neighbour (keeps the material's texture) with a touch of the average so seams stay soft
+        if (n) { const nk = pick; px[k * 4] = (px[nk * 4] * 2 + r / n) / 3; px[k * 4 + 1] = (px[nk * 4 + 1] * 2 + g / n) / 3; px[k * 4 + 2] = (px[nk * 4 + 2] * 2 + b / n) / 3; px[k * 4 + 3] = 255; next[k] = 1; changed++; }
         else if (nd && pass > 2) { px[k * 4] = rd / nd; px[k * 4 + 1] = gd / nd; px[k * 4 + 2] = bd / nd; px[k * 4 + 3] = 255; next[k] = 1; changed++; }
       }
       filled.set(next); if (!changed) break;
@@ -177,11 +179,12 @@ function drawPreview() {
   const pv = $('#pv'); if (!previewing || !lastParts) { pv.width = 0; return; }
   const s = 3, m = manifest[unitId]; pv.width = img.width * s * 2.4; pv.height = img.height * s + 20;
   const ctx = pv.getContext('2d'); ctx.imageSmoothingEnabled = true;
-  const time = (performance.now() - t0) / 1000;
-  const cycle = time % 4;
+  const freeze = new URLSearchParams(location.search).get('freeze');   // ?freeze=2.3 holds the preview at that second of the 4 s cycle
+  const time = freeze != null ? +freeze : (performance.now() - t0) / 1000;
+  const cycle = time % 4, style = attackStyle(UNITS[unitId] && UNITS[unitId].look.weapon);
   const a = cycle < 2 ? { anim: 'walk', animT: time, speed: 2.4, time, seed: 0 }
-    : cycle < 2.5 ? { anim: 'atk', state: 'attack', phase: 'windup', phaseT: cycle - 2, windup: 0.5, recover: 0.5, time, seed: 0 }
-    : cycle < 3.2 ? { anim: 'atk', state: 'attack', phase: 'recover', phaseT: cycle - 2.5, windup: 0.5, recover: 0.7, time, seed: 0 }
+    : cycle < 2.5 ? { anim: 'atk', state: 'attack', phase: 'windup', phaseT: cycle - 2, windup: 0.5, recover: 0.5, time, seed: 0, style }
+    : cycle < 3.2 ? { anim: 'atk', state: 'attack', phase: 'recover', phaseT: cycle - 2.5, windup: 0.5, recover: 0.7, time, seed: 0, style }
     : { anim: 'idle', time, seed: 0 };
   const pose = SKELETONS[rig.skeleton].pose(a);
   const byName = {}; for (const p of lastParts) byName[p.name] = p;
@@ -201,7 +204,7 @@ function drawPreview() {
     ctx.drawImage(p.canvas, (p.off[0] - p.pivot[0]) * s, (p.off[1] - p.pivot[1]) * s, p.canvas.width * s, p.canvas.height * s);
     ctx.restore();
   }
-  ctx.fillStyle = '#fff'; ctx.font = '12px monospace'; ctx.fillText(a.anim + (a.phase ? ' ' + a.phase : ''), 6, pv.height - 6);
+  ctx.fillStyle = '#fff'; ctx.font = '12px monospace'; ctx.fillText(a.anim + (a.phase ? ' ' + a.phase + ' (' + style + ')' : ''), 6, pv.height - 6);
 }
 drawPreview();
 loadUnit($('#unit').value);

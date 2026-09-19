@@ -8,7 +8,7 @@ import { Ground } from './Ground.js';
 import { Weather } from './Weather.js';
 import { TEAM, LANE } from '../data/units.js';
 import { unitCell } from '../art/rig.js';
-import { SKELETONS } from '../art/skeletons.js';
+import { SKELETONS, attackStyle } from '../art/skeletons.js';
 import { PROJECTILES } from '../sim/Projectiles.js';
 
 export const PPU = 12;                 // authoring scale of the procedural pixel art (px per world unit)
@@ -236,7 +236,7 @@ export class Renderer {
     const sc = def.look.scale || 1, ppu = f.ppu / sc;
     const pose = SKELETONS[rig.skeleton].pose({
       anim: u.anim, state: u.state, phase: u.phase, phaseT: u.phaseT, windup: def.windup, recover: def.recover,
-      animT: u.animT, speed: def.movementSpeed, time: this.time, seed: (u.id % 13) * 0.5, hit: u.hitStun > 0 && u.state !== 'attack',
+      animT: u.animT, speed: def.movementSpeed, time: this.time, seed: (u.id % 13) * 0.5, hit: u.hitStun > 0 && u.state !== 'attack', style: attackStyle(def.look.weapon),
     });
     let hop = u.spawnT > 0 ? Math.sin((0.35 - u.spawnT) / 0.35 * Math.PI) * 0.35 : 0;
     if (u.state === 'cheer') hop = Math.abs(Math.sin(u.cheerT * 7)) * 0.5;

@@ -14,5 +14,21 @@
       188
     ],
     "rig": "human/h_swordsman.rig.json"
+  },
+  "h_archer": {
+    "file": "human/h_archer.png",
+    "w": 113,
+    "h": 161,
+    "ax": 52,
+    "ay": 159,
+    "ppu": 75,
+    "src": "docs/human.jpg",
+    "box": [
+      198,
+      24,
+      312,
+      190
+    ],
+    "rig": "human/h_archer.rig.json"
   }
 }

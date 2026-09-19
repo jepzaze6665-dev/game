@@ -23,25 +23,46 @@ export const SKELETONS = {
   },
 };
 
+// How a unit's weapon is used; picked from the roster's `look.weapon`.
+export function attackStyle(weapon) {
+  if (weapon === 'bow') return 'bow';
+  if (['crossbow', 'laser', 'rail', 'pods', 'flamer', 'tesla'].includes(weapon)) return 'gun';
+  if (['staff', 'crook'].includes(weapon)) return 'cast';
+  return 'melee';
+}
+
 // Returns { angles: {part: rad}, dx, dy, sx, sy } for a unit's current state.
-// `a` is the animation input: { anim, state, phase, phaseT, windup, recover, animT, speed, time, seed, hit }.
+// `a` is the animation input: { anim, state, phase, phaseT, windup, recover, animT, speed, time, seed, hit, style }.
 function humanoidPose(a) {
   const A = { legB: 0, legF: 0, torso: 0, head: 0, armB: 0, armF: 0 };
   let dx = 0, dy = 0, sx = 1, sy = 1;
   if (a.state === 'attack' || a.anim === 'atk') {
+    const style = a.style || 'melee';
     if (a.phase === 'windup') {
       const k = ease(Math.min(1, a.phaseT / Math.max(0.05, a.windup)));
-      A.armF = -2.4 * k;           // raise the weapon up and back
-      A.torso = -0.18 * k; A.head = 0.1 * k; A.armB = 0.25 * k;
-      A.legF = -0.15 * k; A.legB = 0.15 * k;
-      dx = -0.06 * k;
+      if (style === 'bow') {           // raise the bow forward, draw the string hand back
+        A.armF = 0.55 * k; A.armB = -0.8 * k; A.torso = -0.1 * k; A.head = 0.08 * k; A.legF = -0.1 * k; A.legB = 0.1 * k;
+      } else if (style === 'gun') {    // shoulder the weapon and aim
+        A.armF = 0.85 * k; A.armB = 0.7 * k; A.torso = -0.05 * k; A.head = 0.04 * k;
+      } else if (style === 'cast') {   // staff overhead, lean back
+        A.armF = -1.7 * k; A.armB = 0.3 * k; A.torso = -0.15 * k; A.head = 0.12 * k; dx = -0.05 * k;
+      } else {                         // raise the weapon up and back
+        A.armF = -2.4 * k; A.torso = -0.18 * k; A.head = 0.1 * k; A.armB = 0.25 * k;
+        A.legF = -0.15 * k; A.legB = 0.15 * k; dx = -0.06 * k;
+      }
     } else {
       const s = Math.max(0, 1 - a.phaseT / Math.max(0.05, a.recover));      // 1 at impact -> 0 recovered
       const snap = s > 0.7 ? 1 : s / 0.7;                                     // hold the impact pose briefly
-      A.armF = 0.9 * snap;         // swung down and forward past the rest pose
-      A.torso = 0.22 * snap; A.head = -0.12 * snap; A.armB = -0.2 * snap;
-      A.legF = 0.35 * snap; A.legB = -0.3 * snap;
-      dx = 0.22 * snap; sy = 1 - 0.04 * snap;
+      if (style === 'bow') {           // release: string hand flicks forward, bow lowers as he recovers
+        A.armF = 0.55 * s; A.armB = 0.3 * snap; A.torso = -0.1 * s + 0.08 * snap; dx = -0.04 * snap;
+      } else if (style === 'gun') {    // recoil while holding the aim
+        A.armF = 0.85 * s + 0.2 * snap; A.armB = 0.7 * s; A.torso = -0.05 * s - 0.12 * snap; A.head = -0.06 * snap; dx = -0.14 * snap;
+      } else if (style === 'cast') {   // thrust the staff forward
+        A.armF = 0.7 * snap; A.armB = -0.2 * snap; A.torso = 0.18 * snap; A.head = -0.08 * snap; dx = 0.15 * snap;
+      } else {                         // swung down and forward past the rest pose
+        A.armF = 0.9 * snap; A.torso = 0.22 * snap; A.head = -0.12 * snap; A.armB = -0.2 * snap;
+        A.legF = 0.35 * snap; A.legB = -0.3 * snap; dx = 0.22 * snap; sy = 1 - 0.04 * snap;
+      }
     }
   } else if (a.anim === 'walk') {
     const ph = a.animT * (4.5 + a.speed * 1.4) * Math.PI;
