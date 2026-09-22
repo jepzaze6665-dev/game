@@ -9,7 +9,7 @@ export const CHAPTERS = [
 
 export const STAGES = [
   { id: 1, chapter: 1, name: 'First Blood',   theme: 'volcanic', difficulty: 'easy',   enemyRace: 'demon', enemyTiers: 5,  tip: 'Imps are cheap and fragile. Any melee squad chews through them.' },
-  { id: 2, chapter: 1, name: 'Hounds Loose',  theme: 'volcanic', difficulty: 'easy',   enemyRace: 'demon', enemyTiers: 8,  tip: 'Blood Hounds dive your ranged line. Keep melee bodies beside your archers.' },
+  { id: 2, chapter: 1, name: 'Hounds Loose',  theme: 'volcanic', difficulty: 'easy',   enemyRace: 'demon', enemyTiers: 8,  tip: 'Hellhounds dive your ranged line. Keep melee bodies beside your archers.' },
   { id: 3, chapter: 1, name: 'The Overlord',  theme: 'volcanic', difficulty: 'normal', enemyRace: 'demon', enemyTiers: 12, tip: 'Demons are all damage and no armour. Trade cheaply and punish with area attacks.' },
   { id: 4, chapter: 2, name: 'Scarab Tide',   theme: 'desert',   difficulty: 'normal', enemyRace: 'mummy', enemyTiers: 5,  tip: 'Swarms melt to splash damage and fire.' },
   { id: 5, chapter: 2, name: 'Sand Golems',   theme: 'desert',   difficulty: 'normal', enemyRace: 'mummy', enemyTiers: 9,  tip: 'Golems regenerate. Burst them down with anti-heavy units, do not chip.' },

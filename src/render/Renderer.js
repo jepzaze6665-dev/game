@@ -9,6 +9,7 @@ import { Weather } from './Weather.js';
 import { TEAM, LANE, BASE_STATS } from '../data/units.js';
 import { unitCell } from '../art/rig.js';
 import { SKELETONS, attackStyle } from '../art/skeletons.js';
+import { SHADOW_SIZES } from '../art/fxSprites.js';
 import { PROJECTILES } from '../sim/Projectiles.js';
 
 export const PPU = 12;                 // authoring scale of the procedural pixel art (px per world unit)
@@ -25,6 +26,11 @@ const GROUND_PPU = 24;
 
 const TEAM_TINT = { [TEAM.PLAYER]: [0.23, 0.51, 0.96], [TEAM.ENEMY]: [0.94, 0.27, 0.27] };
 const TEAM_LIGHT = { [TEAM.PLAYER]: [0.58, 0.77, 0.99], [TEAM.ENEMY]: [0.99, 0.65, 0.65] };
+// the smallest shadow ellipse at least as wide as the sprite, and the scale that fits it
+function shadowFor(widthUnits) {
+  for (const [rx] of SHADOW_SIZES) { const w = (rx * 2 + 1) / PPU; if (w >= widthUnits) return [`shadow_${rx}`, widthUnits / w]; }
+  const [rx] = SHADOW_SIZES[SHADOW_SIZES.length - 1]; const w = (rx * 2 + 1) / PPU; return [`shadow_${rx}`, widthUnits / w];
+}
 const SHADOW_TINT = { [TEAM.PLAYER]: [0.35, 0.55, 1.0], [TEAM.ENEMY]: [1.0, 0.35, 0.35] };
 
 export class Renderer {
@@ -248,11 +254,11 @@ export class Renderer {
     const wUnits = f.w / f.ppu * sc;            // sprite width in world units
     const z = 1 + (LANE.halfWidth - u.y) * 0.01;
     const flip = u.dir < 0;
-    const shadowScale = wUnits / (17 / PPU) * 0.9;
+    const [shadowKey, shadowScale] = shadowFor(wUnits * 0.9);
     const anims = this.art.anims[u.type.id];
     if (anims && (u.state === 'dead' || u.state === 'downed')) {
       const alpha = u.state === 'downed' ? 0.7 + 0.3 * Math.sin(this.time * 10) : u.deadT < 1.0 ? 1 : Math.max(0, 1 - (u.deadT - 1.0) / 0.5);
-      b.push('shadow_big', u.x, u.y, 0.2, { alpha: alpha * 0.8, scale: shadowScale, tint: SHADOW_TINT[u.team] });
+      b.push(shadowKey, u.x, u.y, 0.2, { alpha: alpha * 0.8, scale: shadowScale, tint: SHADOW_TINT[u.team] });
       ab.push(this.animFrame(u, anims), u.x, u.y, z, { flip, alpha, flash: u.flash * 0.5, scale: sc });
       return null;
     }
@@ -260,16 +266,16 @@ export class Renderer {
       const t = Math.min(1, u.deadT / 0.3);
       const rot = -u.dir * t * Math.PI * 0.5;
       const alpha = u.deadT < 0.45 ? 1 : Math.max(0, 1 - (u.deadT - 0.45) / 0.45);
-      b.push('shadow_big', u.x, u.y, 0.2, { alpha: alpha * 0.8, scale: shadowScale, tint: SHADOW_TINT[u.team] });
+      b.push(shadowKey, u.x, u.y, 0.2, { alpha: alpha * 0.8, scale: shadowScale, tint: SHADOW_TINT[u.team] });
       ab.push(u.type.id, u.x, u.y, z, { flip, rot, alpha, flash: u.flash, scale: sc });
       return null;
     }
     if (u.state === 'downed') {
-      b.push('shadow_big', u.x, u.y, 0.2, { alpha: 0.6, scale: shadowScale, tint: SHADOW_TINT[u.team] });
+      b.push(shadowKey, u.x, u.y, 0.2, { alpha: 0.6, scale: shadowScale, tint: SHADOW_TINT[u.team] });
       ab.push(u.type.id, u.x, u.y, z, { flip, rot: -u.dir * Math.PI * 0.5, alpha: 0.7 + 0.3 * Math.sin(this.time * 10), scale: sc });
       return null;
     }
-    b.push('shadow_big', u.x, u.y - 0.05, 0.2, { scale: shadowScale, tint: SHADOW_TINT[u.team], alpha: 0.9 });
+    b.push(shadowKey, u.x, u.y - 0.05, 0.2, { scale: shadowScale, tint: SHADOW_TINT[u.team], alpha: 0.9 });
     if (anims) { const key = this.drawAnimUnit(u, anims, z); const af = this.art.frame(key); return { top: u.y + af.ay / af.ppu * sc + 0.15, w: Math.max(0.8, Math.min(2.4, wUnits * 0.8)), big: wUnits > 1.8 }; }
     const rig = this.art.rigs[u.type.id];
     if (rig) { this.drawPuppet(u, rig, f, z); return { top: u.y + f.h / f.ppu * sc + 0.15, w: Math.max(0.8, Math.min(2.4, wUnits * 0.8)), big: wUnits > 1.8 }; }

@@ -43,9 +43,13 @@ export class ArtAtlas {
       if (e.anim) {
         try {
           const anim = await (await fetch(this.base + e.anim, { cache: 'no-store' })).json();
-          const sheet = await loadImage(anim.sheet);
+          const sheet = await loadImage(anim.sheet + '?v=' + (anim.rev || Date.now()));   // the sheet is repacked whenever it is re-sliced: never pair a cached one with fresh frame boxes
           for (const key in anim.frames) { const [x, y, w, h, ax, ay] = anim.frames[key]; items.push({ key: `${id}#${key}`, im: sheet, sx: x, sy: y, w, h, ax, ay, ppu: anim.ppu || 24 }); }
           const map = {}; for (const a in anim.anims) map[a] = anim.anims[a].map((k) => `${id}#${k}`);
+          // some sheets draw a near-static walk row (the Royal Guard and the
+          // Lightbringer barely move a leg); the manifest can point one animation
+          // at another so those units march with their run cycle instead
+          if (e.animAlias) for (const a in e.animAlias) if (map[e.animAlias[a]]) map[a] = map[e.animAlias[a]];
           this.anims[id] = map;
           if (!images[entries.findIndex(([k]) => k === id)]) { const [x, y, w, h, ax, ay] = anim.frames[anim.anims.idle ? anim.anims.idle[0] : Object.keys(anim.frames)[0]]; items.push({ key: id, im: sheet, sx: x, sy: y, w, h, ax, ay, ppu: anim.ppu || 24 }); }
         } catch (err) { console.warn('ArtAtlas: animation sheet failed for', id, err); }

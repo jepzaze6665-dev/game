@@ -101,6 +101,18 @@ export function animatedUnit(atlas, canvas, id, team, scale, flip = false) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     if (flip) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+    if (art && art.anims[id]) {
+      // frame-animated pixel sheet: cycle the walk row at an integer scale
+      const a = art.anims[id]; const keys = (a.walk && a.walk.length) ? a.walk : (a.idle && a.idle.length) ? a.idle : Object.values(a).find((k) => k && k.length);
+      const f = art.frame(keys[((Math.floor(t * 8) % keys.length) + keys.length) % keys.length]);   // t can start slightly negative (rAF timestamps)
+      ctx.imageSmoothingEnabled = false;
+      let fit = Math.min(scale, canvas.width / f.w, (canvas.height - 2) / f.h); fit = fit >= 1 ? Math.floor(fit) : fit;
+      const w = Math.round(f.w * fit), h = Math.round(f.h * fit);
+      ctx.drawImage(art.canvas, f.x, f.y, f.w, f.h, Math.floor((canvas.width - w) / 2), canvas.height - 2 - h, w, h);
+      ctx.restore();
+      if (!stopped) raf = requestAnimationFrame(draw);
+      return;
+    }
     if (art) {
       // paper-doll bob for hand-drawn art
       const f = art.frame(id);
@@ -118,7 +130,7 @@ export function animatedUnit(atlas, canvas, id, team, scale, flip = false) {
     const f = atlas.frame(`${id}_${team}_${frames[index]}`);
     ctx.imageSmoothingEnabled = false;
     const fit = Math.min(scale, canvas.width / f.w, canvas.height / f.h);
-    const dx = Math.floor((canvas.width - f.w * fit) / 2), dy = Math.floor((canvas.height - f.h * fit) / 2);
+    const dx = Math.floor((canvas.width - f.w * fit) / 2), dy = Math.floor(canvas.height - 2 - f.h * fit);
     ctx.drawImage(atlas.canvas, f.x, f.y, f.w, f.h, dx, dy, f.w * fit, f.h * fit);
     ctx.restore();
     if (!stopped) raf = requestAnimationFrame(draw);

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bannerfall — Screen &amp; Character Bible</title>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500&display=swap" rel="stylesheet">
+<!-- Same UI kit as the game and the graphic bible. -->
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/races.css">
+<style>
+  /* Scrolling document: undo the fixed full-screen rules of the game. */
+  html, body { overflow: auto; height: auto; user-select: text; -webkit-user-select: text; font-size: 16px; }
+  body { background: var(--bg); color: var(--text); }
+  #rotate { display: none !important; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 80px; }
+  header.hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px; padding: 28px 0 18px; border-bottom: 3px solid var(--border); margin-bottom: 8px; }
+  header.hero h1 { font-size: clamp(16px, 3vw, 28px); color: var(--gold); text-shadow: 4px 4px 0 #000; line-height: 1.5; }
+  header.hero .sub { color: var(--muted); font-size: 15px; max-width: 640px; line-height: 1.45; }
+  nav.toc { position: sticky; top: 0; z-index: 10; background: rgba(15,15,30,.94); border-bottom: 3px solid var(--border-dark); margin: 0 -16px 24px; padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 4px 10px; font-family: var(--font-head); font-size: 7px; letter-spacing: 1px; }
+  nav.toc a { color: var(--muted); text-decoration: none; padding: 4px 2px; }
+  nav.toc a:hover { color: var(--gold); }
+  section { margin: 0 0 44px; scroll-margin-top: 64px; }
+  section > h2 { font-size: 13px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid var(--border-dark); }
+  section > h2 small { font-family: var(--font-body); font-size: 14px; color: var(--muted); text-shadow: none; margin-left: 10px; }
+  h3 { margin: 18px 0 8px; font-size: 9px; color: var(--gold); }
+  p { line-height: 1.5; margin: 6px 0; max-width: 78ch; }
+  ul { line-height: 1.5; margin: 6px 0; padding-left: 20px; max-width: 78ch; }
+  .rule { border-left: 4px solid var(--gold); background: var(--panel); padding: 10px 14px; margin: 10px 0; max-width: 78ch; }
+  .rule b { color: var(--gold); }
+  .note { border-left: 4px solid var(--blue); background: var(--panel); padding: 10px 14px; margin: 10px 0; color: var(--muted); max-width: 78ch; font-size: 14px; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .box { background: var(--panel); border: 3px solid var(--border-dark); box-shadow: inset 0 0 0 2px var(--border); padding: 12px 14px; }
+  .box h4 { margin: 0 0 8px; font-family: var(--font-head); font-size: 8px; color: var(--muted); letter-spacing: 1px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border-dark); vertical-align: middle; }
+  th { font-family: var(--font-head); font-size: 7px; color: var(--muted); letter-spacing: 1px; background: var(--panel); }
+  td.num { font-family: var(--font-head); font-size: 9px; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 14px; }
+  .kv b { font-family: var(--font-head); font-size: 8px; color: var(--muted); align-self: center; }
+  .race-head { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin: 26px 0 8px; }
+  .race-head h3 { margin: 0; font-size: 12px; }
+  .race-head .tag { font-size: 6px; }
+  .race-head .line { color: var(--muted); font-size: 14px; }
+  /* portrait grid, rendered live from the atlas */
+  .plate { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px; padding: 10px; background: var(--panel-2); border: 3px solid var(--border-dark); }
+  .pcard { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 14px 4px 8px; background: var(--panel); border: 2px solid var(--border-dark); position: relative; }
+  .pcard .port { background: #0e0e1a; box-shadow: inset 0 0 0 1px var(--border-dark); }
+  .pcard .nm { font-family: var(--font-head); font-size: 7px; color: var(--text); text-align: center; line-height: 1.6; margin-top: 5px; }
+  .pcard .ro { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.3; }
+  .pcard .co { font-family: var(--font-head); font-size: 7px; color: var(--gold); }
+  .pcard .tr { position: absolute; top: 4px; left: 5px; font-family: var(--font-head); font-size: 7px; color: var(--muted); }
+  .src { position: absolute; top: 4px; right: 5px; font-family: var(--font-head); font-size: 5px; letter-spacing: 1px; padding: 2px 3px; border: 1px solid var(--border-dark); }
+  .src.sheet { color: #0e0e1a; background: var(--gold); }
+  .src.rig { color: var(--gold); background: transparent; border-color: var(--gold); }
+  .src.proc { color: var(--muted); }
+  .legend .src { position: static; }
+  /* screenshots */
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px 18px; }
+  figure.shot { margin: 10px 0 0; }
+  figure.shot img { display: block; width: 100%; border: 3px solid var(--border-dark); box-shadow: 0 6px 0 rgba(0,0,0,.45); background: #0e0e1a; }
+  figure.shot figcaption { font-size: 14px; color: var(--muted); line-height: 1.45; margin-top: 10px; }
+  figure.shot figcaption b { display: block; font-family: var(--font-head); font-size: 8px; color: var(--gold); letter-spacing: 1px; margin-bottom: 5px; }
+  figure.shot figcaption code { font-size: 13px; }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 12px; background: var(--panel-2); border: 3px solid var(--border-dark); font-family: var(--font-head); font-size: 7px; }
+  .flow span { background: var(--panel-3); border: 2px solid var(--border-dark); padding: 8px 10px; }
+  .flow i { color: var(--gold); font-style: normal; }
+  .flow span.battle { border-color: var(--gold); color: var(--gold); }
+  .strip { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 10px; background: var(--panel-2); border: 3px solid var(--border-dark); }
+  .foot { color: var(--muted); font-size: 13px; border-top: 2px solid var(--border-dark); padding-top: 12px; }
+  @media (max-width: 720px) { .kv { grid-template-columns: 1fr; } .shots { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <h1>BANNERFALL: FOUR REALMS<br>SCREEN &amp; CHARACTER BIBLE</h1>
+      <div class="sub">Every character portrait and every screen of the game in one place. The line-up in &sect;2 and &sect;3 is drawn <b>live from the game code and the art atlas</b>; the screens in &sect;5 and &sect;6 are captures of the running build. Companion to <a href="graphic-bible.html" style="color:var(--gold)">the graphic bible</a>, which covers the art standard itself.</div>
+    </div>
+    <div class="box" style="min-width:230px"><h4>STATUS</h4><div class="kv" id="status"></div></div>
+  </header>
+
+  <nav class="toc" id="toc"></nav>
+
+  <!-- 1 -->
+  <section id="s1"><h2>1 · HOW TO READ THIS PAGE</h2>
+    <p>Four armies, twelve units each, the same twelve roles in every army: the character sheet is a 4 &times; 12 grid. Every screen of the game is one of thirteen layouts built from one pixel UI kit (<code>css/style.css</code>), so a new screen never invents a new visual language &mdash; it recombines panel, button, tag, chip, card and bar.</p>
+    <div class="cols">
+      <div class="box"><h4>PORTRAIT SOURCE</h4><p style="font-size:14px;margin:0">A unit portrait is never a separate drawing. It is the unit itself: either a head-and-shoulders crop of the idle frame of its animation sheet, or its procedural idle sprite. The icon can never drift from the battlefield.</p></div>
+      <div class="box legend"><h4>BADGES</h4><p style="font-size:14px;margin:0"><span class="src sheet">SHEET</span> pixel-art animation sheet (art v2)<br><span class="src rig">RIG</span> cut-out puppet, no sheet yet<br><span class="src proc">PROC</span> procedural pixel rig</p></div>
+      <div class="box"><h4>CAPTURE</h4><p style="font-size:14px;margin:0">Screens captured at 1568 &times; 607 from the live build via <code>GAME.menus.*</code> and <code>GAME.startBattle</code>. Re-capture after a UI change so this page stays honest.</p></div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="s2"><h2>2 · CHARACTER LINE-UP <small>4 races &times; 12 units, portraits rendered live</small></h2>
+    <p>Tier 1 to 12, left to right, is also the unlock order on the deployment bar and the price ladder. Roles line up across races: tier 4 is always the basic ranged unit, tier 8 the tank, tier 12 the legendary. A portrait has to sell its tier in one glance &mdash; new silhouette, new equipment, stronger identity, never a scaled-up copy.</p>
+    <div id="races"></div>
+  </section>
+
+  <!-- 3 -->
+  <section id="s3"><h2>3 · ART COVERAGE <small>who has drawn art, who is still procedural</small></h2>
+    <p>Art v2 replaces the procedural rig army by army. A unit moves through three states: procedural sprite &rarr; cut-out puppet rig &rarr; pixel-art animation sheet sliced by <code>tools/sheetslice.py</code>. The numbers below are counted at page load, so they cannot go stale.</p>
+    <div id="coverage"></div>
+    <table id="coverage-table"></table>
+  </section>
+
+  <!-- 4 -->
+  <section id="s4"><h2>4 · SCREEN FLOW</h2>
+    <p>Thirteen screens, one loop. Menus are HTML panels over the canvas (<code>src/ui/Menus.js</code>); the HUD is HTML over the live battle (<code>src/ui/HUD.js</code>). Pause always reaches the army sheet, so a player can read counters without losing the match.</p>
+    <div class="flow">
+      <span>TITLE</span><i>&#10148;</i><span>CAMPAIGN</span><span>SKIRMISH</span><i>&#10148;</i><span>RACE SELECT</span><i>&#10148;</i><span>RACE REVEAL</span><i>&#10148;</i><span>STAGE INTRO</span><i>&#10148;</i><span class="battle">BATTLE HUD</span><i>&#10148;</i><span>RESULTS</span><i>&#10148;</i><span>TITLE</span>
+    </div>
+    <div class="note">Side screens reachable from anywhere: <b>ARMY</b> (roster + unit detail), <b>HOW TO PLAY</b>, <b>SETTINGS</b>, <b>PAUSE</b>.</div>
+  </section>
+
+  <!-- 5 -->
+  <section id="s5"><h2>5 · MENU SCREENS</h2>
+    <div class="shots">
+      <figure class="shot"><img src="screens/01-title.jpg" alt="Title screen">
+        <figcaption><b>TITLE</b>Crowned gold plate with crossed swords over a live demo battle, five kit buttons in an ornate frame (campaign gold, skirmish blue), records chip along the bottom (battles, wins, stars, kills). Campaign carries the cleared-stage counter as a key chip.</figcaption></figure>
+      <figure class="shot"><img src="screens/02-armies.jpg" alt="The four armies">
+        <figcaption><b>THE FOUR ARMIES</b>One race-coloured card per army: crest and title, an animated champion in a themed portrait window, flavour text, passive, strength, weakness, the 12-unit preview and a race-coloured <code>VIEW UNITS</code> button; mascots and the call to action sit in the footer band. Doubles as the pick screen before a battle, where <code>CHOOSE</code> takes the big button and the whole card is tappable.</figcaption></figure>
+      <figure class="shot"><img src="screens/08-race-reveal.jpg" alt="Race reveal">
+        <figcaption><b>RACE REVEAL</b>Short transition after picking: the whole army animates in, the race passive and the base sprite are shown once, then <code>TO BATTLE</code>.</figcaption></figure>
+      <figure class="shot"><img src="screens/03-roster-human.jpg" alt="Human army roster">
+        <figcaption><b>ARMY &mdash; 12-CARD ROSTER</b>Tier and hotkey, portrait, name, role, cost and squad size, three quick bars (HP / damage per second / speed), four numbers, ability name and the strong-versus-weak line. Race tabs switch armies in place.</figcaption></figure>
+      <figure class="shot"><img src="screens/07-unit-detail.jpg" alt="Unit detail panel">
+        <figcaption><b>UNIT DETAIL</b>Tapping a card opens the detail drawer under the grid: animated hero portrait, tags, six stat bars, damage type and squad economy, ability, passive and the two counter rows.</figcaption></figure>
+      <figure class="shot"><img src="screens/09-campaign.jpg" alt="Campaign screen">
+        <figcaption><b>CAMPAIGN</b>Four chapters, twelve stages, stars per stage and a padlock on anything past the frontier. The right panel previews the field, names the enemy commander personality, the roster slice and the tip.</figcaption></figure>
+      <figure class="shot"><img src="screens/10-skirmish.jpg" alt="Skirmish setup">
+        <figcaption><b>SKIRMISH</b>Three rows of chips: enemy race (plus random), difficulty card, battlefield theme. One primary button leads into the same race pick as campaign.</figcaption></figure>
+      <figure class="shot"><img src="screens/11-how-to-play.jpg" alt="How to play">
+        <figcaption><b>HOW TO PLAY</b>Four numbered steps with live art: gold trickle, deployment card, the counter wheel (six real matchups drawn from the atlas) and the enemy gate. Shown once automatically before the first battle.</figcaption></figure>
+      <figure class="shot"><img src="screens/12-settings.jpg" alt="Settings">
+        <figcaption><b>SETTINGS</b>Two sliders (sound effects, music), two toggles (screen shake, damage numbers) and a two-step progress reset. Reachable from the title and from pause.</figcaption></figure>
+      <figure class="shot"><img src="screens/14-pause.jpg" alt="Pause menu">
+        <figcaption><b>PAUSE</b>Narrow column: resume, my army, restart, settings, quit. The dimmed battle stays visible behind it.</figcaption></figure>
+    </div>
+    <h3>THE SAME ROSTER IN FOUR PALETTES</h3>
+    <p>One layout, four colour identities: blue steel, crimson, cyan iron, sand gold. Race colour lives in the card border, the emblem and the heading only &mdash; the data stays in the neutral panel colour so cards remain comparable across armies.</p>
+    <div class="shots">
+      <figure class="shot"><img src="screens/04-roster-demon.jpg" alt="Demon army roster"><figcaption><b>DEMON &mdash; LEGION OF HELL</b></figcaption></figure>
+      <figure class="shot"><img src="screens/05-roster-robot.jpg" alt="Robot army roster"><figcaption><b>ROBOT &mdash; IRON DOMINION</b></figcaption></figure>
+      <figure class="shot"><img src="screens/06-roster-mummy.jpg" alt="Mummy army roster"><figcaption><b>MUMMY &mdash; KINGDOM OF THE DEAD</b></figcaption></figure>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="s6"><h2>6 · BATTLE SCREENS</h2>
+    <div class="shots">
+      <figure class="shot"><img src="screens/18-stage-intro.jpg" alt="Stage intro and countdown">
+        <figcaption><b>STAGE INTRO</b>Stage name, field, both emblems around a VS, the tip, then a three-second countdown. The battle is already rendered behind it.</figcaption></figure>
+      <figure class="shot"><img src="screens/15-hud-start.jpg" alt="Battle HUD at the start">
+        <figcaption><b>HUD &mdash; OPENING</b>Top left gold, income and army count; centre the two base bars, the clock, the push meter and the wave bar with the mustering queue; top right the enemy count, speed and pause; bottom the twelve deployment cards.</figcaption></figure>
+      <figure class="shot"><img src="screens/16-hud-fight.jpg" alt="Battle HUD mid fight">
+        <figcaption><b>HUD &mdash; MID FIGHT</b>Composition chips fill in on both sides, the minimap tracks the front, cards light up gold when affordable and carry a COUNTER! ribbon when they answer the current threat. The camera follows the front line across a lane about 1.5 screens wide.</figcaption></figure>
+      <figure class="shot"><img src="screens/17-card-tooltip.jpg" alt="Deployment card tooltip">
+        <figcaption><b>CARD TOOLTIP</b>Hover or long-press a card: squad size, role, description, four stats, ability and tags &mdash; the same data as the army sheet, without leaving the battle.</figcaption></figure>
+      <figure class="shot"><img src="screens/13-results.jpg" alt="Victory results screen">
+        <figcaption><b>RESULTS</b>Verdict, both emblems, up to three stars, six stat boxes (time, kills, lost, gold spent, deployed, MVP) and the most deployed squad. Buttons adapt: next stage, play again, change race, menu.</figcaption></figure>
+    </div>
+    <h3>HUD ANATOMY</h3>
+    <div class="cols">
+      <div class="box"><h4>TOP LEFT &mdash; YOU</h4><ul style="font-size:14px"><li>Gold chip with coin icon and income per second</li><li>Army count</li><li>Composition chips of your live army</li></ul></div>
+      <div class="box"><h4>TOP CENTRE &mdash; THE MATCH</h4><ul style="font-size:14px"><li>Both base HP bars with the clock between them</li><li>Unit count, player versus enemy</li><li>Push meter and next-wave bar with the queue</li><li>Minimap, kills and losses</li></ul></div>
+      <div class="box"><h4>TOP RIGHT &mdash; THEM</h4><ul style="font-size:14px"><li>Enemy race emblem and army count</li><li>Speed toggle, sound, pause</li><li>Enemy composition chips, current threat highlighted</li></ul></div>
+      <div class="box"><h4>BOTTOM &mdash; DEPLOYMENT</h4><ul style="font-size:14px"><li>Twelve cards: hotkey, squad size, portrait, name, cost</li><li>States: affordable, poor, cooldown sweep, locked, recommended</li><li>Feedback: deploy pulse, deny shake, gold flash</li></ul></div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="s7"><h2>7 · THE KIT BEHIND EVERY SCREEN <small>live from css/style.css</small></h2>
+    <p>Dark semi-transparent panels, bevelled 3-px borders with an inner dark line, chamfered corners, a hard drop shadow instead of blur. Two fonts only: Press Start 2P for headings, numbers and labels; Pixelify Sans for body copy.</p>
+    <div class="strip">
+      <div class="panel" style="padding:10px 14px"><h2 style="font-size:11px">PANEL</h2><p class="muted" style="margin:4px 0 0;font-size:13px">bevel + chamfer + hard shadow</p></div>
+      <button class="btn primary">PRIMARY</button><button class="btn blue">BLUE</button><button class="btn red">RED</button><button class="btn">DEFAULT</button><button class="btn ghost">GHOST</button>
+      <span class="tag easy">EASY</span><span class="tag normal">NORMAL</span><span class="tag hard">HARD</span><span class="tag brutal">BRUTAL</span>
+    </div>
+    <div class="rule"><b>Rule:</b> a new screen composes these pieces. No new border style, no second accent colour, no rounded buttons, no blur.</div>
+  </section>
+
+  <div class="foot">Bannerfall: Four Realms &middot; Screen &amp; Character Bible &middot; line-up rendered live from the repository, screens captured from the running build &middot; open via <code>node tools/serve.mjs 8765</code> &rarr; <code>/docs/screen-bible.html</code></div>
+</div>
+
+<script type="module">
+import { Atlas } from '../src/render/Atlas.js';
+import { ArtAtlas } from '../src/render/ArtAtlas.js';
+import { UNITS, RACE_UNITS, RACES, RACE_ORDER, TEAM } from '../src/data/units.js';
+import { unitIconFit } from '../src/ui/icons.js';
+
+const $ = (s) => document.querySelector(s);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+
+const atlas = new Atlas();
+const art = new ArtAtlas('../assets/units/');
+await art.loading;
+atlas.art = art;                      // the same handle the HUD and menus use
+
+// ---- table of contents ----
+for (const s of document.querySelectorAll('section')) { const a = el('a', null, s.querySelector('h2').childNodes[0].textContent.trim()); a.href = '#' + s.id; $('#toc').appendChild(a); }
+
+// ---- art state of every unit ----
+const artState = (id) => art.anims[id] ? 'sheet' : art.rigs[id] ? 'rig' : 'proc';
+const LABEL = { sheet: 'SHEET', rig: 'RIG', proc: 'PROC' };
+const ids = Object.keys(UNITS);
+const count = (st) => ids.filter((id) => artState(id) === st).length;
+
+$('#status').innerHTML = `<b>UNITS</b><span>${ids.length} (${RACE_ORDER.length} races &times; 12)</span>`
+  + '<b>SCREENS</b><span>13 layouts &middot; 18 captures</span>'
+  + `<b>ART V2</b><span>${count('sheet')} sheets &middot; ${count('rig')} rigs &middot; ${count('proc')} procedural</span>`
+  + `<b>FRAMES</b><span>${Object.keys(atlas.frames).length} procedural + ${Object.keys(art.frames).length} drawn</span>`;
+
+// ---- 2 line-up ----
+function emblem(rid, scale = 3) {
+  const f = atlas.frame('emblem_' + RACES[rid].emblem);
+  const c = document.createElement('canvas'); c.width = f.w * scale; c.height = f.h * scale;
+  const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(atlas.canvas, f.x, f.y, f.w, f.h, 0, 0, c.width, c.height);
+  return c;
+}
+for (const rid of RACE_ORDER) {
+  const R = RACES[rid], host = $('#races');
+  const head = el('div', 'race-head');
+  head.appendChild(emblem(rid, 3));
+  head.appendChild(el('h3', null, `${R.name.toUpperCase()} &mdash; ${R.title.toUpperCase()}`));
+  head.appendChild(el('span', 'tag', R.passive.name));
+  head.appendChild(el('span', 'line', R.tagline));
+  host.appendChild(head);
+  const plate = el('div', 'plate');
+  for (const id of RACE_UNITS[rid]) {
+    const d = UNITS[id], st = artState(id);
+    const card = el('div', 'pcard');
+    card.appendChild(el('div', 'tr', String(d.tier)));
+    card.appendChild(el('div', 'src ' + st, LABEL[st]));
+    const port = unitIconFit(atlas, id, TEAM.PLAYER, 96);
+    port.classList.add('port');
+    card.appendChild(port);
+    card.appendChild(el('div', 'nm', d.name));
+    card.appendChild(el('div', 'ro', d.role));
+    card.appendChild(el('div', 'co', `&#9679; ${d.cost} <span style="color:var(--muted)">&times;${d.squad}</span>`));
+    plate.appendChild(card);
+  }
+  host.appendChild(plate);
+}
+
+// ---- 3 coverage ----
+const bar = el('div', 'strip legend');
+for (const st of ['sheet', 'rig', 'proc']) {
+  bar.appendChild(el('div', null, `<span class="src ${st}">${LABEL[st]}</span> <b style="font-family:var(--font-head);font-size:11px;color:var(--gold)">${count(st)}</b> <span class="muted" style="font-size:13px">of ${ids.length} units</span>`));
+}
+$('#coverage').appendChild(bar);
+
+let rows = '<tr><th>RACE</th><th>SHEET</th><th>RIG ONLY</th><th>PROCEDURAL</th><th>STILL TO DRAW</th></tr>';
+for (const rid of RACE_ORDER) {
+  const list = RACE_UNITS[rid];
+  const sheet = list.filter((id) => artState(id) === 'sheet');
+  const rig = list.filter((id) => artState(id) === 'rig');
+  const proc = list.filter((id) => artState(id) === 'proc');
+  rows += `<tr><td><b>${RACES[rid].name}</b></td><td class="num">${sheet.length}</td><td class="num">${rig.length}</td><td class="num">${proc.length}</td>`
+    + `<td style="color:var(--muted)">${[...rig, ...proc].map((id) => UNITS[id].name).join(', ') || 'complete'}</td></tr>`;
+}
+$('#coverage-table').innerHTML = rows;
+</script>
+</body>
+</html>

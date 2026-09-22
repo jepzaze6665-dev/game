@@ -1,7 +1,7 @@
 // In-battle HUD: resources, army counts, base bars, centre numbers, unit bar.
 import { UNITS, RACE_UNITS, RACES, TEAM, BASE_STATS, ECONOMY } from '../data/units.js';
 import { counterMultiplier } from '../sim/Combat.js';
-import { unitIconFit, frameIcon } from './icons.js';
+import { unitIconFit } from './icons.js';
 
 function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 function fmtTime(t) { const m = Math.floor(t / 60), s = Math.floor(t % 60); return `${m}:${s.toString().padStart(2, '0')}`; }
@@ -32,7 +32,7 @@ export class HUD {
     this.raceName = el('span', 'sub', 'HUMAN'); this.raceChip.appendChild(this.raceName);
     row1.appendChild(this.raceChip);
     this.goldChip = el('div', 'hud-chip gold');
-    this.goldChip.appendChild(frameIcon(this.atlas, 'coin', 4)).className = 'ico';
+    this.goldChip.appendChild(el('span', 'ico coin'));
     this.goldVal = el('span', 'val', '0'); this.goldChip.appendChild(this.goldVal);
     this.goldSub = el('span', 'sub', '+8/s'); this.goldChip.appendChild(this.goldSub);
     row1.appendChild(this.goldChip);
@@ -47,7 +47,7 @@ export class HUD {
     const center = el('div', 'hud-center');
     const bars = el('div', 'base-bars');
     this.barP = this.makeBar('p', 'YOUR CASTLE'); bars.appendChild(this.barP.el);
-    this.timer = el('div', 'timer', '0:00'); bars.appendChild(this.timer);
+    this.timer = el('div', 'timer'); this.timer.appendChild(el('span', 'ico clock')); this.timerTxt = el('span', null, '0:00'); this.timer.appendChild(this.timerTxt); bars.appendChild(this.timer);
     this.timer.title = 'Destroy the enemy base to win. Siege damage rises at 6:00, both gates crumble from 12:00, 20 minute cap.';
     this.barE = this.makeBar('e', 'ENEMY FORTRESS'); bars.appendChild(this.barE.el);
     center.appendChild(bars);
@@ -122,9 +122,9 @@ export class HUD {
     this.barP.el.querySelector('.lbl').textContent = 'YOUR ' + RACES[race].base.toUpperCase();
     this.barE.el.querySelector('.lbl').textContent = 'ENEMY ' + RACES[enemyRace].base.toUpperCase();
     this.raceChip.title = RACES[race].passive.name + ': ' + RACES[race].passive.desc;
-    this.raceIcon.innerHTML = ''; this.raceIcon.appendChild(frameIcon(this.atlas, 'emblem_' + RACES[race].emblem, 1)).className = 'ico';
+    this.raceIcon.className = 'ico em ' + race; this.raceChip.className = 'hud-chip race ' + race;
     this.raceName.textContent = RACES[race].name.toUpperCase();
-    this.enemyRaceIcon.innerHTML = ''; this.enemyRaceIcon.appendChild(frameIcon(this.atlas, 'emblem_' + RACES[enemyRace].emblem, 1)).className = 'ico';
+    this.enemyRaceIcon.className = 'ico em ' + enemyRace; this.enemyRaceChip.className = 'hud-chip race enemy ' + enemyRace;
     this.enemyRaceName.textContent = RACES[enemyRace].name.toUpperCase();
     this.compCache = { 0: {}, 1: {} }; this.compP.innerHTML = ''; this.compE.innerHTML = '';
     this.bar.innerHTML = '';
@@ -140,13 +140,13 @@ export class HUD {
       const icon = unitIconFit(this.atlas, id, TEAM.PLAYER, box); icon.className = 'icon'; c.appendChild(icon);
       c.appendChild(el('span', 'name', def.name));
       const cost = el('span', 'cost');
-      cost.appendChild(frameIcon(this.atlas, 'coin', 2)).className = 'ico';
+      cost.appendChild(el('span', 'ico coin'));
       cost.appendChild(el('span', null, String(def.cost)));
       c.appendChild(cost);
       c.appendChild(el('div', 'cd'));
       c.appendChild(el('div', 'cdt', ''));
-      if (def.tier >= 11) c.appendChild(el('span', 'tierstar', def.tier === 12 ? '&#9733;&#9733;' : '&#9733;'));
-      if (!inRoster) { c.classList.add('locked'); c.appendChild(el('div', 'lockico', '&#128274;')); }
+      if (def.tier >= 11) c.appendChild(el('span', 'tierstar', '<span class="ico star"></span>'.repeat(def.tier === 12 ? 2 : 1)));
+      if (!inRoster) { c.classList.add('locked'); c.appendChild(el('div', 'lockico', '<span class="ico lock"></span>')); }
       c.setAttribute('aria-label', `${def.name}, ${def.role}, ${def.cost} gold. Hold to inspect.`);
       let held = false;
       c.addEventListener('pointerdown', (e) => {
@@ -270,7 +270,7 @@ export class HUD {
     if (c.cp !== cp) { c.cp = cp; this.armyPVal.textContent = cp; this.numP.textContent = cp; this.pop(this.numP); }
     if (c.ce !== ce) { c.ce = ce; this.armyEVal.textContent = ce; this.numE.textContent = ce; this.pop(this.numE); }
     const t = fmtTime(battle.time);
-    if (c.t !== t) { c.t = t; this.timer.textContent = t; }
+    if (c.t !== t) { c.t = t; this.timerTxt.textContent = t; }
     this.updateBar(this.barP, battle.bases[0]);
     this.updateBar(this.barE, battle.bases[1]);
     // push meter: frontline from -base .. +base → 0..100%

@@ -1,5 +1,7 @@
 // UIManager screens: title, race selection, army roster, campaign, skirmish,
-// codex, how-to-play, settings, pause, stage intro and results.
+// how-to-play, settings, pause, stage intro and results.
+// Every screen is a `shell`: an ornate gold frame with a starry title plate,
+// a scrolling body and an optional footer band (see css/style.css).
 import { UNITS, RACE_UNITS, RACES, RACE_ORDER, TAGS, TEAM } from '../data/units.js';
 import { STAGES, CHAPTERS } from '../data/stages.js';
 import { DIFFICULTIES, PERSONALITIES } from '../sim/EnemyAI.js';
@@ -10,6 +12,15 @@ function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.
 function btn(label, cls, onClick) { const b = el('button', 'btn ' + (cls || ''), label); b.onclick = (e) => { e.stopPropagation(); onClick && onClick(); }; return b; }
 function fmtTime(t) { const m = Math.floor(t / 60), s = Math.floor(t % 60); return `${m}:${s.toString().padStart(2, '0')}`; }
 const pips = (n, max = 3) => '<span class="pips">' + '&#9679;'.repeat(n) + '<i>' + '&#9679;'.repeat(max - n) + '</i></span>';
+const stars = (n, max = 3, cls = '') => Array.from({ length: max }, (_, i) => `<span class="ico star ${i < n ? 'on' : 'off'} ${cls}"></span>`).join('');
+// the champion drawn in each army's portrait window and as a footer mascot
+const HERO = { human: 'h_king', demon: 'd_behemoth', robot: 'r_omega', mummy: 'm_pharaoh' };
+const RACE_FLAVOUR = {
+  human: 'Loyal, disciplined and unbreakable. A kingdom of steel that answers every threat in kind.',
+  demon: 'Born from fire and chaos. Ruthless, brutal and relentless — they burn brightest when they bleed.',
+  robot: 'Cold precision from the iron foundries. Armour, artillery and inevitability.',
+  mummy: 'An ancient dynasty risen from the sands. Timeless, tireless, and never truly dead.',
+};
 
 export class Menus {
   constructor(root, atlas, progression, cb) {
@@ -18,7 +29,7 @@ export class Menus {
     this.stopAnims = [];
     this.selectedStage = 0;
     this.skirmish = { difficulty: 'normal', theme: 'meadow', enemyRace: 'demon' };
-    this.root.addEventListener('click', (e) => { if (e.target.closest('.btn, .stage-node, .diff-card, .codex-item, .theme-chip, .toggle, .seg button, .race-card, .race-tab, .chip')) this.cb.click(); });
+    this.root.addEventListener('click', (e) => { if (e.target.closest('.btn, .close-x, .stage-node, .diff-card, .theme-chip, .toggle, .seg button, .race-card, .race-tab, .race-chip, .roster-card')) this.cb.click(); });
   }
 
   close() {
@@ -35,103 +46,149 @@ export class Menus {
     return s;
   }
 
-  emblem(race, scale = 2) { return frameIcon(this.atlas, 'emblem_' + RACES[race].emblem, scale); }
+  // ---------- kit helpers ----------
+  emblem(race, size = '') { return el('span', `ico em ${race} ${size}`); }
+
+  // Animated champion on a transparent canvas (used in portraits and the footer band).
+  hero(rid, w = 120, h = 110, flip = false) {
+    const id = HERO[rid], def = UNITS[id];
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    this.stopAnims.push(animatedUnit(this.atlas, cv, id, TEAM.PLAYER, def.look.body === 'giant' ? 2 : 3, flip));
+    return cv;
+  }
+
+  // Ornate screen shell. opts: { race, sub, onClose, closeLabel, size: 'narrow'|'medium'|'', dim, id }
+  shell(title, opts = {}) {
+    const s = this.open(opts.dim === false ? 'clear' : 'dim');
+    if (opts.id) s.id = opts.id;
+    const f = el('div', 'frame shell ' + (opts.size || ''));
+    const head = el('div', 'shell-head');
+    const plate = el('div', 'plate');
+    plate.appendChild(el('span', 'ico sword'));
+    const name = el('div', 'plate-box name');
+    name.appendChild(el('span', 'ico crown crown'));
+    if (opts.race) name.appendChild(this.emblem(opts.race, 'm'));
+    name.appendChild(el('span', null, title));
+    plate.appendChild(name);
+    plate.appendChild(el('span', 'ico sword r'));
+    head.appendChild(plate);
+    if (opts.sub) head.appendChild(el('div', 'sub', opts.sub));
+    f.appendChild(head);
+    if (opts.onClose) {
+      const x = el('button', 'close-x'); x.setAttribute('aria-label', opts.closeLabel || 'BACK'); x.title = opts.closeLabel || 'Back';
+      x.onclick = (e) => { e.stopPropagation(); opts.onClose(); };
+      f.appendChild(x);
+    }
+    const body = el('div', 'shell-body');
+    f.appendChild(body);
+    s.appendChild(f);
+    return { s, frame: f, head, body, foot: () => { const ft = el('div', 'shell-foot'); f.appendChild(ft); return ft; } };
+  }
 
   // ---------- title ----------
   title() {
     const s = this.open('clear'); s.id = 'title';
-    const inner = el('div', 'screen-inner');
-    inner.appendChild(el('div', 'logo', '<span class="l1">BANNERFALL</span><span class="l2">FOUR REALMS</span><span class="sub">ONE LANE &middot; COUNTLESS TACTICS</span>'));
-    const col = el('div', 'menu-col panel');
+    const inner = el('div', 'title-inner');
+    const logo = el('div', 'logo');
+    const row = el('div', 'plate-row');
+    row.appendChild(el('span', 'ico sword'));
+    const box = el('div', 'plate-box');
+    box.appendChild(el('span', 'ico crown crown'));
+    box.appendChild(el('span', 'l1', 'BANNERFALL'));
+    box.appendChild(el('span', 'l2', 'FOUR REALMS'));
+    row.appendChild(box);
+    row.appendChild(el('span', 'ico sword r'));
+    logo.appendChild(row);
+    logo.appendChild(el('span', 'sub', 'ONE LANE &middot; COUNTLESS TACTICS'));
+    inner.appendChild(logo);
+    const col = el('div', 'menu-col frame');
     const cleared = this.prog.data.stagesCleared;
-    col.appendChild(btn(cleared > 0 ? `CAMPAIGN <span class="key">${cleared}/${STAGES.length}</span>` : 'CAMPAIGN', 'primary', () => this.campaign()));
-    col.appendChild(btn('SKIRMISH', 'blue', () => this.skirmishMenu()));
+    col.appendChild(btn(cleared > 0 ? `CAMPAIGN <span class="key">${cleared}/${STAGES.length}</span>` : 'CAMPAIGN', 'primary orn', () => this.campaign()));
+    col.appendChild(btn('SKIRMISH', 'human orn', () => this.skirmishMenu()));
     col.appendChild(btn('ARMIES', '', () => this.raceSelect({ mode: 'browse' })));
     col.appendChild(btn('HOW TO PLAY', '', () => this.howto()));
     col.appendChild(btn('SETTINGS', 'ghost', () => this.settings()));
     inner.appendChild(col);
     s.appendChild(inner);
     const st = this.prog.data.stats;
-    s.appendChild(el('div', 'title-foot', `<span class="records"><b>RECORDS</b> <i>&#9876;</i> ${st.played} battles <i>&#127942;</i> ${st.wins} wins <i>&#9733;</i> ${this.prog.totalStars()} stars <i>&#128128;</i> ${st.kills} kills</span><span class="muted">v2.0 &middot; ThreeJS</span>`));
+    s.appendChild(el('div', 'title-foot', `<div class="records chip"><b>RECORDS</b><span><span class="ico sword" style="width:34px;height:9px;background-size:34px 9px"></span>${st.played} battles</span><span><span class="ico trophy"></span>${st.wins} wins</span><span><span class="ico star"></span>${this.prog.totalStars()} stars</span><span><span class="ico skull"></span>${st.kills} kills</span></div><span class="ver muted">v2.0 &middot; THREEJS</span>`));
   }
 
-  // ---------- race selection ----------
+  // ---------- race selection: THE FOUR ARMIES ----------
   // opts: { mode: 'browse' | 'pick', title, onPick(race), onBack, enemyRace }
   raceSelect(opts) {
-    const s = this.open('dim');
-    const p = el('div', 'panel screen-inner wide');
-    const head = el('div', 'menu-head');
-    head.appendChild(el('h2', null, opts.title || (opts.mode === 'pick' ? 'CHOOSE YOUR RACE' : 'THE FOUR ARMIES')));
-    head.appendChild(btn('BACK', 'small ghost', () => opts.onBack ? opts.onBack() : this.title()));
-    p.appendChild(head);
-    if (opts.enemyRace) p.appendChild(el('div', 'muted vs-line', `Enemy: <b class="red">${RACES[opts.enemyRace].name}</b> &mdash; ${RACES[opts.enemyRace].identity}`));
+    const pick = opts.mode === 'pick';
+    const { body, foot } = this.shell(opts.title || (pick ? 'CHOOSE YOUR ARMY' : 'THE FOUR ARMIES'), { onClose: () => opts.onBack ? opts.onBack() : this.title(), id: 'armies' });
+    if (opts.enemyRace) body.appendChild(el('div', 'muted vs-line', `You will face the <b class="red">${RACES[opts.enemyRace].name}</b> &mdash; ${RACES[opts.enemyRace].identity}`));
     const grid = el('div', 'race-grid');
     for (const rid of RACE_ORDER) {
       const r = RACES[rid];
-      const card = el('article', 'race-card ' + rid);
-      const top = el('div', 'rc-top');
-      top.appendChild(this.emblem(rid, 3));
+      const card = el('article', 'race-card ' + rid + (pick ? ' pickable' : ''));
+      const top = el('div', 'rc-head');
+      top.appendChild(this.emblem(rid));
       top.appendChild(el('div', 'rc-title', `<b>${r.name.toUpperCase()}</b><span>${r.title}</span>`));
       card.appendChild(top);
-      card.appendChild(el('p', 'rc-desc', r.description));
-      card.appendChild(el('div', 'rc-line', `<small>IDENTITY</small>${r.identity}`));
+      const port = el('div', 'rc-portrait ' + rid);
+      port.appendChild(el('div', 'scene'));
+      port.appendChild(el('div', 'flag l')); port.appendChild(el('div', 'flag r'));
+      port.appendChild(this.hero(rid, 150, 100));
+      port.appendChild(el('div', 'ground'));
+      card.appendChild(port);
+      card.appendChild(el('p', 'rc-desc', RACE_FLAVOUR[rid]));
       card.appendChild(el('div', 'rc-line passive', `<small>PASSIVE &middot; ${r.passive.name}</small>${r.passive.desc}`));
-      card.appendChild(el('div', 'rc-line', `<small>STRENGTHS</small>${r.strengths.join(' / ')}`));
-      card.appendChild(el('div', 'rc-line', `<small>TRADEOFFS</small>${r.weaknesses.join(' / ')}`));
-      const lineup = el('div', 'rc-lineup');
-      for (const id of RACE_UNITS[rid]) lineup.appendChild(unitIconFit(this.atlas, id, TEAM.PLAYER, 44));
+      card.appendChild(el('div', 'rc-line strength', `<small>STRENGTH</small>${r.strengths.join(', ')}.`));
+      card.appendChild(el('div', 'rc-line', `<small>WEAKNESS</small>${r.weaknesses.join(', ')}.`));
+      card.appendChild(el('div', 'rc-line', `<small class="split"><span>UNITS PREVIEW</span><span title="Complexity: ${['', 'easy to learn', 'some tricks', 'advanced'][r.difficulty]}">${['', 'EASY', 'TRICKY', 'ADVANCED'][r.difficulty]} ${pips(r.difficulty)}</span></small>`));
+      const lineup = el('div', 'rc-preview');
+      for (const id of RACE_UNITS[rid]) { const c = unitIconFit(this.atlas, id, TEAM.PLAYER, 36); c.title = UNITS[id].name; lineup.appendChild(c); }
       card.appendChild(lineup);
-      card.appendChild(el('div', 'rc-line', `<small>COMPLEXITY</small>${pips(r.difficulty)} <span class="muted">${['', 'Easy to learn', 'Some tricks', 'Advanced'][r.difficulty]}</span>`));
-      const foot = el('div', 'rc-foot');
-      foot.appendChild(btn('VIEW UNITS', 'small', () => this.roster(rid, () => this.raceSelect(opts))));
-      if (opts.mode === 'pick') foot.appendChild(btn('CHOOSE', 'small primary', () => this.raceReveal(rid, opts)));
-      card.appendChild(foot);
+      const ft = el('div', 'rc-foot');
+      if (pick) {
+        ft.classList.add('row');
+        ft.appendChild(btn('CHOOSE', rid + ' orn', () => this.raceReveal(rid, opts)));
+        ft.appendChild(btn('VIEW UNITS', 'small', () => this.roster(rid, () => this.raceSelect(opts))));
+      } else ft.appendChild(btn('VIEW UNITS', rid + ' orn', () => this.roster(rid, () => this.raceSelect(opts))));
+      card.appendChild(ft);
+      if (pick) card.onclick = (e) => { if (!e.target.closest('.btn')) this.raceReveal(rid, opts); };
       grid.appendChild(card);
     }
-    p.appendChild(grid);
-    s.appendChild(p);
+    body.appendChild(grid);
+    const f = foot();
+    const ml = el('div', 'mascot'); ml.appendChild(this.hero('human', 96, 76)); f.appendChild(ml);
+    f.appendChild(el('div', 'foot-text', `<div class="orn-title">${pick ? 'PICK YOUR BANNER' : 'CHOOSE YOUR ARMY'}</div><p>Each army has unique units, a passive and its own way to win.<br>${pick ? 'Choose one and <b>lead it to the enemy gate</b>.' : 'Lead them to victory and conquer the battlefield!'}</p>`));
+    const mr = el('div', 'mascot r'); mr.appendChild(this.hero('mummy', 96, 76)); f.appendChild(mr);
   }
 
   // Short transition: show the army, passive and base before the fight.
   raceReveal(rid, opts) {
     const r = RACES[rid];
-    const s = this.open('dim reveal');
-    const p = el('div', 'panel reveal-panel ' + rid);
-    const head = el('div', 'reveal-head');
-    head.appendChild(this.emblem(rid, 4));
-    head.appendChild(el('div', null, `<h1 class="pixel-text">${r.name.toUpperCase()}</h1><div class="muted">${r.title} &mdash; ${r.tagline}</div>`));
-    p.appendChild(head);
-    const army = el('div', 'reveal-army');
+    const { body } = this.shell(r.name.toUpperCase(), { race: rid, sub: `${r.title.toUpperCase()} &middot; ${r.tagline.toUpperCase()}`, onClose: () => this.raceSelect(opts) });
+    body.classList.add(rid);
+    const army = el('div', 'reveal-army box');
     RACE_UNITS[rid].forEach((id, i) => {
       const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; cv.style.animationDelay = (i * 0.06) + 's';
       army.appendChild(cv);
       this.stopAnims.push(animatedUnit(this.atlas, cv, id, TEAM.PLAYER, UNITS[id].look.body === 'giant' || UNITS[id].look.body === 'mount' ? 1 : 2));
     });
-    p.appendChild(army);
-    const row = el('div', 'reveal-row');
-    row.appendChild(el('div', 'reveal-box', `<small>PASSIVE &middot; ${r.passive.name}</small>${r.passive.desc}`));
-    const baseBox = el('div', 'reveal-box base'); baseBox.appendChild(el('small', null, 'YOUR BASE')); baseBox.appendChild(frameIcon(this.atlas, `base_${r.base}_0`, 1)); row.appendChild(baseBox);
-    p.appendChild(row);
-    const foot = el('div', 'menu-foot'); foot.style.justifyContent = 'center';
-    foot.appendChild(btn('BACK', 'ghost small', () => this.raceSelect(opts)));
-    foot.appendChild(btn('TO BATTLE', 'primary', () => opts.onPick(rid)));
-    p.appendChild(foot);
-    s.appendChild(p);
+    body.appendChild(army);
+    const row = el('div', 'reveal-row'); row.style.marginTop = '12px';
+    row.appendChild(el('div', 'reveal-box box', `<small>PASSIVE &middot; ${r.passive.name}</small>${r.passive.desc}<br><br><small>IDENTITY</small>${r.identity}`));
+    const baseBox = el('div', 'reveal-box base box'); baseBox.appendChild(el('small', null, 'YOUR BASE')); baseBox.appendChild(frameIcon(this.atlas, `base_${r.base}_0`, 1)); row.appendChild(baseBox);
+    body.appendChild(row);
+    const ft = el('div', 'menu-foot center');
+    ft.appendChild(btn('BACK', 'ghost small', () => this.raceSelect(opts)));
+    ft.appendChild(btn('TO BATTLE', 'primary orn', () => opts.onPick(rid)));
+    body.appendChild(ft);
     this.cb.reveal && this.cb.reveal(rid);
   }
 
   // ---------- army roster (12-unit grid with details) ----------
   roster(rid, onBack, selected = null) {
     const r = RACES[rid];
-    const s = this.open('dim');
-    const p = el('div', 'panel screen-inner wide');
-    const head = el('div', 'menu-head');
-    const h = el('div', 'race-title'); h.appendChild(this.emblem(rid, 2)); h.appendChild(el('h2', null, `${r.name.toUpperCase()} ARMY`)); head.appendChild(h);
+    const { body } = this.shell(`${r.name.toUpperCase()} ARMY`, { race: rid, sub: r.title.toUpperCase(), onClose: () => onBack ? onBack() : this.title() });
     const tabs = el('div', 'race-tabs');
-    for (const other of RACE_ORDER) { const t = el('button', 'race-tab ' + other + (other === rid ? ' on' : '')); t.appendChild(this.emblem(other, 1)); t.appendChild(el('span', null, RACES[other].name)); t.onclick = () => this.roster(other, onBack); tabs.appendChild(t); }
-    head.appendChild(tabs);
-    head.appendChild(btn('BACK', 'small ghost', () => onBack ? onBack() : this.title()));
-    p.appendChild(head);
+    for (const other of RACE_ORDER) { const t = el('button', 'race-tab ' + other + (other === rid ? ' on' : '')); t.appendChild(this.emblem(other, 's')); t.appendChild(el('span', null, RACES[other].name.toUpperCase())); t.onclick = () => this.roster(other, onBack); tabs.appendChild(t); }
+    body.appendChild(tabs);
     const grid = el('div', 'roster-grid');
     for (const id of RACE_UNITS[rid]) {
       const d = UNITS[id];
@@ -140,7 +197,7 @@ export class Menus {
       c.appendChild(unitIconFit(this.atlas, id, TEAM.PLAYER, 52));
       c.appendChild(el('div', 'rn', d.name));
       c.appendChild(el('div', 'rr', d.role));
-      c.appendChild(el('div', 'rc', `&#9679; ${d.cost} <span>x${d.squad}</span>`));
+      c.appendChild(el('div', 'rc', `<span class="ico coin" style="width:12px;height:12px;background-size:12px 12px"></span>${d.cost} <span>x${d.squad}</span>`));
       const bars = el('div', 'rbars');
       const bar = (v, max, cls) => { const b = el('div', 'rbar ' + cls); b.appendChild(el('i')).style.width = Math.min(100, v / max * 100) + '%'; bars.appendChild(b); };
       bar(d.hp, 1300, 'hp'); bar(d.damage * d.attackSpeed, 60, 'dmg'); bar(d.movementSpeed, 5, 'spd');
@@ -151,15 +208,14 @@ export class Menus {
       c.onclick = () => this.roster(rid, onBack, id);
       grid.appendChild(c);
     }
-    p.appendChild(grid);
-    if (selected) p.appendChild(this.unitDetail(selected));
-    else p.appendChild(el('div', 'muted hint-line', 'Tap a unit to see stats, abilities and counters. Bars: HP / damage per second / speed.'));
-    s.appendChild(p);
+    body.appendChild(grid);
+    if (selected) { const d = this.unitDetail(selected); body.appendChild(d); requestAnimationFrame(() => d.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
+    else body.appendChild(el('div', 'muted hint-line', 'Tap a unit to see stats, abilities and counters. Bars: HP / damage per second / speed.'));
   }
 
   unitDetail(id) {
     const def = UNITS[id];
-    const d = el('div', 'unit-detail');
+    const d = el('div', 'unit-detail box gold');
     const hero = el('div', 'codex-hero');
     const cv = document.createElement('canvas'); cv.width = 120; cv.height = 120;
     hero.appendChild(cv);
@@ -195,31 +251,24 @@ export class Menus {
 
   // ---------- campaign ----------
   campaign() {
-    const s = this.open('dim');
-    const p = el('div', 'panel screen-inner wide');
-    const head = el('div', 'menu-head');
-    head.appendChild(el('h2', null, 'CAMPAIGN'));
-    head.appendChild(el('div', 'muted', `${this.prog.totalStars()} / ${STAGES.length * 3} stars`));
-    head.appendChild(btn('BACK', 'small ghost', () => this.title()));
-    p.appendChild(head);
+    const { body } = this.shell('CAMPAIGN', { sub: `${this.prog.totalStars()} / ${STAGES.length * 3} STARS COLLECTED`, onClose: () => this.title() });
     const cleared = this.prog.data.stagesCleared;
     if (this.selectedStage > cleared) this.selectedStage = cleared;
     if (this.selectedStage >= STAGES.length) this.selectedStage = STAGES.length - 1;
     const grid = el('div', 'menu-grid');
     const list = el('div', 'chapter-list');
     for (const ch of CHAPTERS) {
-      const box = el('div', 'chapter ' + ch.enemyRace);
-      const h = el('div', 'ch-head'); h.appendChild(this.emblem(ch.enemyRace, 2)); h.appendChild(el('div', null, `<b>CHAPTER ${ch.id} &middot; ${ch.name.toUpperCase()}</b><span>${ch.blurb}</span>`)); box.appendChild(h);
+      const box = el('div', 'chapter box ' + ch.enemyRace);
+      const h = el('div', 'ch-head'); h.appendChild(this.emblem(ch.enemyRace, 'm')); h.appendChild(el('div', null, `<b>CHAPTER ${ch.id} &middot; ${ch.name.toUpperCase()}</b><span>${ch.blurb}</span>`)); box.appendChild(h);
       const row = el('div', 'stage-row');
       STAGES.filter((st) => st.chapter === ch.id).forEach((st) => {
         const i = STAGES.indexOf(st);
         const locked = i > cleared;
         const n = el('button', 'stage-node' + (locked ? ' locked' : '') + (i === this.selectedStage ? ' selected' : ''));
-        const stars = this.prog.data.stars[st.id] || 0;
-        n.appendChild(el('div', 'num', `<span>STAGE ${st.id}</span><span class="tag ${st.difficulty}">${st.difficulty}</span>`));
+        const got = this.prog.data.stars[st.id] || 0;
+        n.appendChild(el('div', 'num', `<span>STAGE ${st.id}${locked ? '<span class="lock"><span class="ico lock"></span></span>' : ''}</span><span class="tag ${st.difficulty}">${st.difficulty}</span>`));
         n.appendChild(el('div', 'name', st.name));
-        n.appendChild(el('div', 'stars', '&#9733;'.repeat(stars) + '<span style="opacity:.25">' + '&#9733;'.repeat(3 - stars) + '</span>'));
-        if (locked) n.appendChild(el('div', 'lock', '&#128274;'));
+        n.appendChild(el('div', 'stars', stars(got)));
         n.onclick = () => { if (locked) return; this.selectedStage = i; this.campaign(); };
         row.appendChild(n);
       });
@@ -228,13 +277,11 @@ export class Menus {
     }
     grid.appendChild(list);
     grid.appendChild(this.stageDetail(STAGES[this.selectedStage]));
-    p.appendChild(grid);
-    s.appendChild(p);
+    body.appendChild(grid);
   }
 
   stageDetail(st) {
-    const d = el('div', 'stage-detail panel');
-    d.style.padding = '12px';
+    const d = el('div', 'stage-detail box gold');
     d.appendChild(el('h2', null, `${st.id}. ${st.name}`));
     const prev = el('div', 'preview'); prev.appendChild(this.cb.themePreview(st.theme)); d.appendChild(prev);
     const r = RACES[st.enemyRace];
@@ -248,30 +295,25 @@ export class Menus {
     for (const id of RACE_UNITS[st.enemyRace].slice(0, st.enemyTiers)) { const m = el('div', 'mini-unit'); m.appendChild(unitIconFit(this.atlas, id, TEAM.ENEMY, 40, 'idle', true)); m.title = UNITS[id].name; lineup.appendChild(m); }
     d.appendChild(lineup);
     const foot = el('div', 'menu-foot');
-    foot.appendChild(btn('CHOOSE RACE & FIGHT', 'primary', () => this.cb.startCampaign(st)));
+    foot.appendChild(btn('CHOOSE RACE & FIGHT', 'primary orn', () => this.cb.startCampaign(st)));
     d.appendChild(foot);
     return d;
   }
 
   // ---------- skirmish ----------
   skirmishMenu() {
-    const s = this.open('dim');
-    const p = el('div', 'panel screen-inner wide');
-    const head = el('div', 'menu-head');
-    head.appendChild(el('h2', null, 'SKIRMISH'));
-    head.appendChild(btn('BACK', 'small ghost', () => this.title()));
-    p.appendChild(head);
-    p.appendChild(el('h3', null, 'ENEMY RACE'));
+    const { body } = this.shell('SKIRMISH', { sub: 'ONE BATTLE, YOUR RULES', size: 'medium', onClose: () => this.title() });
+    body.appendChild(el('div', 'sec-label', 'ENEMY RACE'));
     const races = el('div', 'race-row');
     for (const rid of [...RACE_ORDER, 'random']) {
-      const c = el('button', 'chip race-chip ' + rid + (this.skirmish.enemyRace === rid ? ' selected' : ''));
-      if (rid !== 'random') c.appendChild(this.emblem(rid, 2)); else c.appendChild(el('span', 'q', '?'));
-      c.appendChild(el('span', null, rid === 'random' ? 'Random' : RACES[rid].name));
+      const c = el('button', 'race-chip ' + rid + (this.skirmish.enemyRace === rid ? ' selected' : ''));
+      if (rid !== 'random') c.appendChild(this.emblem(rid, 's')); else c.appendChild(el('span', 'q', '?'));
+      c.appendChild(el('span', null, rid === 'random' ? 'RANDOM' : RACES[rid].name.toUpperCase()));
       c.onclick = () => { this.skirmish.enemyRace = rid; this.skirmishMenu(); };
       races.appendChild(c);
     }
-    p.appendChild(races);
-    p.appendChild(el('h3', null, 'DIFFICULTY')).style.marginTop = '12px';
+    body.appendChild(races);
+    body.appendChild(el('div', 'sec-label', 'DIFFICULTY'));
     const grid = el('div', 'diff-grid');
     for (const key in DIFFICULTIES) {
       const d = DIFFICULTIES[key];
@@ -280,8 +322,8 @@ export class Menus {
       c.onclick = () => { this.skirmish.difficulty = key; this.skirmishMenu(); };
       grid.appendChild(c);
     }
-    p.appendChild(grid);
-    p.appendChild(el('h3', null, 'BATTLEFIELD')).style.marginTop = '12px';
+    body.appendChild(grid);
+    body.appendChild(el('div', 'sec-label', 'BATTLEFIELD'));
     const row = el('div', 'theme-row');
     for (const key in THEMES) {
       const t = THEMES[key];
@@ -290,22 +332,16 @@ export class Menus {
       c.onclick = () => { this.skirmish.theme = key; this.skirmishMenu(); };
       row.appendChild(c);
     }
-    p.appendChild(row);
-    const foot = el('div', 'menu-foot');
-    foot.appendChild(btn('CHOOSE RACE & FIGHT', 'primary', () => this.cb.startSkirmish({ ...this.skirmish })));
-    p.appendChild(foot);
-    s.appendChild(p);
+    body.appendChild(row);
+    const foot = el('div', 'menu-foot center');
+    foot.appendChild(btn('CHOOSE RACE & FIGHT', 'primary orn', () => this.cb.startSkirmish({ ...this.skirmish })));
+    body.appendChild(foot);
   }
 
   // ---------- how to play ----------
   howto(onDone) {
-    const s = this.open('dim');
-    const p = el('div', 'panel screen-inner'); p.style.maxWidth = '860px';
-    const head = el('div', 'menu-head');
-    head.appendChild(el('h2', null, 'HOW TO PLAY'));
-    head.appendChild(btn(onDone ? 'SKIP' : 'BACK', 'small ghost', () => onDone ? onDone() : this.title()));
-    p.appendChild(head);
-    p.appendChild(el('p', 'muted', 'Units you buy muster at your gate and march together every 10 seconds - so does the enemy. Siege damage rises at 6:00 and both gates crumble from 12:00, so matches end around 10-15 minutes; at 20:00 the healthier base wins.'));
+    const { body } = this.shell('HOW TO PLAY', { sub: 'FOUR STEPS TO THE ENEMY GATE', size: 'medium', onClose: () => onDone ? onDone() : this.title(), closeLabel: onDone ? 'SKIP' : 'BACK' });
+    body.appendChild(el('p', 'howto-intro', 'Units you buy muster at your gate and march together every 10 seconds - so does the enemy. Siege damage rises at 6:00 and both gates crumble from 12:00, so matches end around 10-15 minutes; at 20:00 the healthier base wins.'));
     const steps = el('div', 'howto-steps');
     const step = (n, title, text, art) => {
       const d = el('div', 'howto-step');
@@ -314,14 +350,14 @@ export class Menus {
       d.appendChild(el('div', 't', `<b>${title}</b><span>${text}</span>`));
       steps.appendChild(d);
     };
-    const coin = el('div', 'howto-coin'); coin.appendChild(frameIcon(this.atlas, 'coin', 6)); coin.appendChild(el('span', 'pixel-text gold', '+7/s'));
+    const coin = el('div', 'howto-coin'); coin.appendChild(el('span', 'ico coin', '')).style.cssText = 'width:54px;height:54px;background-size:54px 54px'; coin.appendChild(el('span', 'pixel-text gold', '+7/s'));
     step('1', 'EARN GOLD', 'Gold trickles in every second and faster when you are losing ground. Save it or spend it fast.', coin);
     const card = el('div', 'howto-card');
     card.appendChild(unitIconFit(this.atlas, 'h_swordsman', TEAM.PLAYER, 48));
     card.appendChild(el('span', 'pixel-text', 'Swordsman <span class="gold">&#9679;60</span>'));
     step('2', 'DEPLOY SQUADS', 'Click a card (or press its key) to send a whole squad. Units march and fight on their own.', card);
     const wheel = el('div', 'howto-wheel');
-    for (const [a, b2, why] of [['h_spearman', 'd_hellknight', 'spears beat cavalry'], ['h_knight', 'm_bonearcher', 'cavalry beats ranged'], ['h_crossbow', 'r_tank', 'piercing beats armour'], ['h_firemage', 'm_scarab', 'fire beats swarms'], ['d_hound', 'h_priest', 'hunters beat backlines'], ['h_paladin', 'm_mummy', 'holy beats undead']]) {
+    for (const [a, b2, why] of [['h_spearman', 'd_doombringer', 'spears beat cavalry'], ['h_knight', 'm_bonearcher', 'cavalry beats ranged'], ['h_crossbow', 'r_tank', 'piercing beats armour'], ['h_firemage', 'm_scarab', 'fire beats swarms'], ['d_hound', 'h_priest', 'hunters beat backlines'], ['h_paladin', 'm_mummy', 'holy beats undead']]) {
       const r = el('div', 'pair');
       const icons = el('div', 'icons');
       icons.appendChild(unitIconFit(this.atlas, a, TEAM.PLAYER, 40));
@@ -334,21 +370,15 @@ export class Menus {
     step('3', 'COUNTER THEM', 'Every unit has tags (LIGHT, HEAVY, ARMORED, CAVALRY, RANGED, SWARM, MAGIC…). Hit a tag a unit is strong against for +50% damage. Cards marked COUNTER! are your best answer right now.', wheel);
     const base = el('div', 'howto-base'); base.appendChild(frameIcon(this.atlas, 'base_fortress_1', 1)); base.appendChild(el('span', 'pixel-text red', 'DESTROY IT'));
     step('4', 'BREAK THE GATE', 'Push the front line across the field and smash their base before they smash yours. Elite and Legendary units (★) turn a war.', base);
-    p.appendChild(steps);
-    const foot = el('div', 'menu-foot'); foot.style.justifyContent = 'center';
-    foot.appendChild(btn(onDone ? 'GOT IT — FIGHT!' : 'GOT IT', 'primary', () => onDone ? onDone() : this.title()));
-    p.appendChild(foot);
-    s.appendChild(p);
+    body.appendChild(steps);
+    const foot = el('div', 'menu-foot center');
+    foot.appendChild(btn(onDone ? 'GOT IT — FIGHT!' : 'GOT IT', 'primary orn', () => onDone ? onDone() : this.title()));
+    body.appendChild(foot);
   }
 
   // ---------- settings ----------
   settings(fromPause = false) {
-    const s = this.open('dim');
-    const p = el('div', 'panel screen-inner'); p.style.maxWidth = '560px';
-    const head = el('div', 'menu-head');
-    head.appendChild(el('h2', null, 'SETTINGS'));
-    head.appendChild(btn('BACK', 'small ghost', () => fromPause ? this.pause() : this.title()));
-    p.appendChild(head);
+    const { body } = this.shell('SETTINGS', { size: 'narrow', onClose: () => fromPause ? this.pause() : this.title() });
     const st = this.prog.settings;
     const slider = (label, desc, key) => {
       const r = el('div', 'setting-row');
@@ -358,14 +388,14 @@ export class Menus {
       const val = el('span', 'slider-val', Math.round(st[key] * 100) + '%');
       i.oninput = () => { st[key] = parseFloat(i.value); val.textContent = Math.round(st[key] * 100) + '%'; this.prog.save(); this.cb.settingsChanged(); };
       i.onchange = () => this.cb.click();
-      wrap.append(i, val); r.appendChild(wrap); p.appendChild(r);
+      wrap.append(i, val); r.appendChild(wrap); body.appendChild(r);
     };
     const toggle = (label, desc, key) => {
       const r = el('div', 'setting-row');
       r.appendChild(el('div', null, `<div class="lbl">${label}</div><div class="desc">${desc}</div>`));
       const t = el('div', 'toggle' + (st[key] ? ' on' : '')); t.appendChild(el('i'));
       t.onclick = () => { st[key] = !st[key]; t.classList.toggle('on', st[key]); this.prog.save(); this.cb.settingsChanged(); this.cb.click(); };
-      r.appendChild(t); p.appendChild(r);
+      r.appendChild(t); body.appendChild(r);
     };
     slider('SOUND EFFECTS', 'Swords, arrows, explosions.', 'sfx');
     slider('MUSIC', 'Chiptune battle themes.', 'music');
@@ -375,37 +405,34 @@ export class Menus {
     r.appendChild(el('div', null, '<div class="lbl">PROGRESS</div><div class="desc">Wipe campaign stars and records.</div>'));
     r.appendChild(btn('RESET', 'small red', () => { if (this.confirmReset) { this.prog.reset(); this.cb.settingsChanged(); this.settings(fromPause); } else { this.confirmReset = true; r.lastChild.textContent = 'SURE?'; } }));
     this.confirmReset = false;
-    p.appendChild(r);
-    s.appendChild(p);
+    body.appendChild(r);
   }
 
   // ---------- pause ----------
   pause() {
-    const s = this.open('dim');
-    const p = el('div', 'panel'); p.style.width = 'min(360px, 100%)';
-    p.appendChild(el('h2', null, 'PAUSED')).style.textAlign = 'center';
-    const col = el('div', 'menu-col'); col.style.marginTop = '14px'; col.style.width = '100%';
-    col.appendChild(btn('RESUME', 'primary', () => this.cb.resume()));
+    const { body, frame } = this.shell('PAUSED', { size: 'narrow', sub: 'THE BATTLE WAITS' });
+    frame.classList.add('pause-panel');
+    const col = el('div', 'menu-col');
+    col.appendChild(btn('RESUME', 'primary orn', () => this.cb.resume()));
     col.appendChild(btn('MY ARMY', '', () => this.roster(this.cb.currentRace(), () => this.pause())));
     col.appendChild(btn('RESTART', '', () => this.cb.restart()));
     col.appendChild(btn('SETTINGS', '', () => this.settings(true)));
     col.appendChild(btn('QUIT TO MENU', 'red', () => this.cb.quit()));
-    p.appendChild(col);
-    s.appendChild(p);
+    body.appendChild(col);
   }
 
   // ---------- stage intro / countdown ----------
   intro(name, tip, sub, races) {
     const s = this.open('clear');
     const box = el('div', 'stage-intro');
-    box.appendChild(el('h3', null, sub || ''));
+    if (sub) box.appendChild(el('div', 'sub chip gold', sub));
     box.appendChild(el('h1', 'pixel-text', name));
     if (races) {
-      const vs = el('div', 'intro-vs');
-      vs.appendChild(this.emblem(races[0], 3)); vs.appendChild(el('span', 'blue', RACES[races[0]].name)); vs.appendChild(el('b', null, 'VS')); vs.appendChild(el('span', 'red', RACES[races[1]].name)); vs.appendChild(this.emblem(races[1], 3));
+      const vs = el('div', 'intro-vs chip');
+      vs.appendChild(this.emblem(races[0])); vs.appendChild(el('span', 'blue', RACES[races[0]].name.toUpperCase())); vs.appendChild(el('b', null, 'VS')); vs.appendChild(el('span', 'red', RACES[races[1]].name.toUpperCase())); vs.appendChild(this.emblem(races[1]));
       box.appendChild(vs);
     }
-    if (tip) box.appendChild(el('div', 'tip', tip));
+    if (tip) box.appendChild(el('div', 'tip box', tip));
     this.count = el('div', 'countdown', '3');
     box.appendChild(this.count);
     s.appendChild(box);
@@ -415,29 +442,27 @@ export class Menus {
 
   // ---------- results ----------
   results(r) {
-    const s = this.open(r.won ? '' : 'dim');
-    const p = el('div', 'panel screen-inner'); p.style.maxWidth = '680px';
+    const { body } = this.shell('BATTLE REPORT', { size: 'medium', dim: !r.won, sub: r.won ? 'THE ENEMY GATE HAS FALLEN' : r.draw ? 'BOTH GATES STILL STAND' : 'YOUR GATE HAS FALLEN' });
     const box = el('div', 'results');
     box.appendChild(el('div', 'title ' + (r.won ? 'win' : 'lose'), r.draw ? 'DRAW' : r.won ? 'VICTORY' : 'DEFEAT'));
-    const vs = el('div', 'intro-vs small'); vs.appendChild(this.emblem(r.race, 2)); vs.appendChild(el('span', 'blue', RACES[r.race].name)); vs.appendChild(el('b', null, 'VS')); vs.appendChild(el('span', 'red', RACES[r.enemyRace].name)); vs.appendChild(this.emblem(r.enemyRace, 2)); box.appendChild(vs);
+    const vs = el('div', 'intro-vs small chip'); vs.appendChild(this.emblem(r.race, 's')); vs.appendChild(el('span', 'blue', RACES[r.race].name.toUpperCase())); vs.appendChild(el('b', null, 'VS')); vs.appendChild(el('span', 'red', RACES[r.enemyRace].name.toUpperCase())); vs.appendChild(this.emblem(r.enemyRace, 's')); box.appendChild(vs);
     if (r.won) {
-      const stars = el('div', 'stars');
-      for (let i = 0; i < 3; i++) { const sp = el('span', i < r.stars ? 'on' : '', '&#9733;'); sp.style.animationDelay = (0.3 + i * 0.25) + 's'; stars.appendChild(sp); }
-      box.appendChild(stars);
-      box.appendChild(el('div', 'muted', r.stars === 3 ? 'Flawless command!' : r.stars === 2 ? 'Solid victory. Keep your base healthier for 3 stars.' : 'Close one. Counter faster next time.'));
-    } else box.appendChild(el('div', 'muted', r.hintText || 'The enemy broke through. Read their army and answer with counters.'));
+      const st = el('div', 'stars');
+      for (let i = 0; i < 3; i++) { const sp = el('span', 'ico star ' + (i < r.stars ? 'on' : 'off')); sp.style.animationDelay = (0.3 + i * 0.25) + 's'; st.appendChild(sp); }
+      box.appendChild(st);
+      box.appendChild(el('div', 'verdict', r.stars === 3 ? 'Flawless command!' : r.stars === 2 ? 'Solid victory. Keep your base healthier for 3 stars.' : 'Close one. Counter faster next time.'));
+    } else box.appendChild(el('div', 'verdict', r.hintText || 'The enemy broke through. Read their army and answer with counters.'));
     const grid = el('div', 'stat-grid');
     const stats = [['TIME', fmtTime(r.time)], ['KILLS', r.kills], ['LOST', r.lost], ['GOLD SPENT', r.spent], ['DEPLOYED', r.deployed], ['MVP', r.favourite || '-']];
-    stats.forEach(([k, v], i) => { const b = el('div', 'stat-box', `<small>${k}</small><b>${v}</b>`); b.style.animationDelay = (0.1 * i) + 's'; grid.appendChild(b); });
+    stats.forEach(([k, v], i) => { const b = el('div', 'stat-box box', `<small>${k}</small><b>${v}</b>`); b.style.animationDelay = (0.1 * i) + 's'; grid.appendChild(b); });
     box.appendChild(grid);
-    if (r.mvpId) { const m = el('div', 'mvp-box'); m.appendChild(unitIconFit(this.atlas, r.mvpId, TEAM.PLAYER, 48)); m.appendChild(el('div', 't', `<b>MOST DEPLOYED</b>${UNITS[r.mvpId].name} &middot; ${r.mvpN} squads`)); box.appendChild(m); }
-    const foot = el('div', 'menu-foot'); foot.style.justifyContent = 'center';
-    if (r.won && r.next) foot.appendChild(btn('NEXT STAGE', 'primary', () => this.cb.nextStage()));
-    foot.appendChild(btn(r.won ? 'PLAY AGAIN' : 'RETRY', r.won && r.next ? 'blue' : 'primary', () => this.cb.restart()));
+    if (r.mvpId) { const m = el('div', 'mvp-box box gold'); m.appendChild(unitIconFit(this.atlas, r.mvpId, TEAM.PLAYER, 48)); m.appendChild(el('div', 't', `<b>MOST DEPLOYED</b>${UNITS[r.mvpId].name} &middot; ${r.mvpN} squads`)); box.appendChild(m); }
+    const foot = el('div', 'menu-foot center');
+    if (r.won && r.next) foot.appendChild(btn('NEXT STAGE', 'primary orn', () => this.cb.nextStage()));
+    foot.appendChild(btn(r.won ? 'PLAY AGAIN' : 'RETRY', r.won && r.next ? 'human' : 'primary orn', () => this.cb.restart()));
     foot.appendChild(btn('CHANGE RACE', 'ghost', () => this.cb.changeRace()));
     foot.appendChild(btn('MENU', 'ghost', () => this.cb.quit()));
     box.appendChild(foot);
-    p.appendChild(box);
-    s.appendChild(p);
+    body.appendChild(box);
   }
 }
