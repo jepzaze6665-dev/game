@@ -52,14 +52,15 @@ const FRAG = /* glsl */`
     vec4 t = texture2D(uTex, vUv);
     if (t.a < 0.05) discard;
     if (vAlpha < 0.999 && vAlpha < bayer(gl_FragCoord.xy)) discard;
-    vec3 col = t.rgb * vTint;
-    col = mix(col, vec3(1.0), vFlash);
+    vec3 col = mix(t.rgb, vec3(1.0), vFlash) * vTint;   // flash 1 + tint = solid silhouette
     gl_FragColor = vec4(col, t.a);
   }
 `;
 
 export class SpriteBatch {
-  constructor(atlas, capacity = 6000, ppu = 12) {
+  // `ppu` converts frame pixels to world units (the art's authoring scale);
+  // `snap` is the screen pixel grid sprite origins snap to (the render scale).
+  constructor(atlas, capacity = 6000, ppu = 12, snap = ppu) {
     this.atlas = atlas;
     this.capacity = capacity;
     this.count = 0;
@@ -74,7 +75,7 @@ export class SpriteBatch {
     geo.setAttribute('iAnchor', this.aAnchor); geo.setAttribute('iParam', this.aParam); geo.setAttribute('iTint', this.aTint);
     this.geo = geo;
     const mat = new THREE.ShaderMaterial({
-      uniforms: { uTex: { value: atlas.texture }, uPPU: { value: ppu } },
+      uniforms: { uTex: { value: atlas.texture }, uPPU: { value: snap } },
       vertexShader: VERT, fragmentShader: FRAG,
       transparent: true, depthTest: true, depthWrite: true, side: THREE.DoubleSide,
     });
@@ -84,6 +85,8 @@ export class SpriteBatch {
     this.geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
   }
 
+  setSnap(snap) { this.mesh.material.uniforms.uPPU.value = snap; }
+
   begin() { this.count = 0; }
 
   // Push one sprite. Sizes are in world units (frame pixels / ppu * scale).
@@ -92,8 +95,9 @@ export class SpriteBatch {
     const f = this.atlas.frame(key);
     const i = this.count++;
     const scale = (opts && opts.scale) || 1;
-    const sx = (opts && opts.sx != null ? opts.sx : f.w * scale) / this.ppu;
-    const sy = (opts && opts.sy != null ? opts.sy : f.h * scale) / this.ppu;
+    const ppu = f.ppu || this.ppu;
+    const sx = (opts && opts.sx != null ? opts.sx : f.w * scale) / ppu;
+    const sy = (opts && opts.sy != null ? opts.sy : f.h * scale) / ppu;
     this.aPos.array[i * 3] = x; this.aPos.array[i * 3 + 1] = y; this.aPos.array[i * 3 + 2] = z;
     this.aUV.array[i * 4] = f.u0; this.aUV.array[i * 4 + 1] = f.v0; this.aUV.array[i * 4 + 2] = f.u1; this.aUV.array[i * 4 + 3] = f.v1;
     this.aSize.array[i * 2] = sx; this.aSize.array[i * 2 + 1] = sy;

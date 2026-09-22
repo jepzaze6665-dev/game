@@ -6,6 +6,16 @@ const root = path.resolve(new URL('..', import.meta.url).pathname.replace(/^\/([
 const port = Number(process.argv[2] || 8765);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
 http.createServer((req, res) => {
+  // dev-only asset save used by tools/rig.html: POST /__save?path=assets/... with the raw body
+  if (req.method === 'POST' && req.url.startsWith('/__save')) {
+    const target = decodeURIComponent(new URL(req.url, 'http://x').searchParams.get('path') || '');
+    const file = path.join(root, target);
+    if (!file.startsWith(path.join(root, 'assets')) || target.includes('..')) { res.writeHead(403); return res.end('assets only'); }
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, Buffer.concat(chunks)); res.writeHead(200); res.end('saved ' + target); });
+    return;
+  }
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p.endsWith('/')) p += 'index.html';
   const file = path.join(root, p);

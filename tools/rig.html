@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Rig editor</title>
+<style>
+  body { margin: 0; background: #1c1b33; color: #f0ecff; font: 14px 'Segoe UI', system-ui, sans-serif; display: grid; grid-template-columns: 300px 1fr; height: 100vh; }
+  aside { padding: 12px; background: #0f0f1e; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+  main { overflow: auto; padding: 12px; }
+  canvas { image-rendering: pixelated; background: #3f7a3a; cursor: crosshair; }
+  select, button, input { font: inherit; background: #26254a; color: inherit; border: 2px solid #4a4880; padding: 6px 8px; }
+  button.primary { background: #e0a800; color: #000; font-weight: 700; }
+  .part { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 2px solid #33325e; cursor: pointer; }
+  .part.sel { border-color: #ffd23f; background: #26254a; }
+  .part i { width: 14px; height: 14px; display: inline-block; }
+  .part small { color: #9a97c4; margin-left: auto; }
+  .hint { color: #9a97c4; font-size: 12px; line-height: 1.4; }
+  #log { font-size: 12px; color: #4fd062; white-space: pre-wrap; }
+  kbd { background: #33325e; padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+</style></head>
+<body>
+<aside>
+  <b>RIG EDITOR</b>
+  <label>Unit <select id="unit"></select></label>
+  <label>Skeleton <select id="skel"></select></label>
+  <label>Zoom <input id="zoom" type="range" min="2" max="8" value="4"></label>
+  <div id="parts"></div>
+  <div class="hint">
+    <b>Left click</b>: add a polygon point to the selected part<br>
+    <b>Shift + click</b>: set the part's pivot<br>
+    <b>Right click</b>: remove last point · <kbd>Tab</kbd> next part<br>
+    Parts are listed back → front. A part's pixels are its polygon minus the polygons of the parts in front of it; the uncovered area is in-painted so nothing shows through when a limb swings.
+  </div>
+  <button id="clear">Clear selected part</button>
+  <button id="save" class="primary">Cut parts &amp; save rig</button>
+  <button id="preview">Preview walk / attack</button>
+  <div id="log"></div>
+</aside>
+<main><canvas id="c"></canvas><canvas id="pv" style="margin-left:16px;vertical-align:top;background:#5fae4a"></canvas></main>
+<script type="module">
+import { SKELETONS, attackStyle } from '../src/art/skeletons.js';
+import { UNITS } from '../src/data/units.js';
+const $ = (s) => document.querySelector(s);
+const COLORS = ['#ff6b6b', '#ffd23f', '#4fd062', '#38e0ff', '#b45cff', '#ff7a3d', '#93c5fd'];
+const BASE = '../assets/units/';
+let manifest = {}, unitId = null, img = null, skel = 'humanoid', rig = null, sel = 0, zoom = 4;
+
+async function saveFile(path, body) { const r = await fetch('/__save?path=' + encodeURIComponent('assets/units/' + path), { method: 'POST', body }); log(await r.text()); }
+function log(t) { $('#log').textContent = t + '\n' + $('#log').textContent.slice(0, 600); }
+
+manifest = await (await fetch(BASE + 'manifest.json', { cache: 'no-store' })).json();
+for (const id in manifest) $('#unit').appendChild(new Option(id, id));
+for (const k in SKELETONS) $('#skel').appendChild(new Option(SKELETONS[k].label, k));
+$('#unit').onchange = () => loadUnit($('#unit').value);
+$('#skel').onchange = () => { skel = $('#skel').value; newRig(); render(); };
+$('#zoom').oninput = () => { zoom = +$('#zoom').value; render(); };
+$('#clear').onclick = () => { rig.parts[sel].poly = []; rig.parts[sel].pivot = null; render(); };
+$('#save').onclick = exportRig;
+$('#preview').onclick = () => { previewing = !previewing; };
+
+async function loadUnit(id) {
+  unitId = id;
+  const m = manifest[id];
+  img = await new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = BASE + m.file + '?t=' + Date.now(); });
+  rig = null;
+  if (m.rig) { try { rig = await (await fetch(BASE + m.rig, { cache: 'no-store' })).json(); skel = rig.skeleton; $('#skel').value = skel; } catch (e) { rig = null; } }
+  if (!rig) newRig();
+  sel = 0; render();
+}
+function newRig() { rig = { skeleton: skel, parts: SKELETONS[skel].parts.map((p) => ({ name: p.name, parent: p.parent, poly: [], pivot: null })) }; }
+
+function render() {
+  const list = $('#parts'); list.innerHTML = '';
+  rig.parts.forEach((p, i) => {
+    const def = SKELETONS[skel].parts[i];
+    const d = document.createElement('div'); d.className = 'part' + (i === sel ? ' sel' : '');
+    d.innerHTML = `<i style="background:${COLORS[i % COLORS.length]}"></i>${def.label}<small>${p.poly.length} pts ${p.pivot ? '· pivot' : ''}</small>`;
+    d.title = def.hint; d.onclick = () => { sel = i; render(); };
+    list.appendChild(d);
+  });
+  const c = $('#c'); c.width = img.width * zoom; c.height = img.height * zoom;
+  const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const m = manifest[unitId];
+  ctx.fillStyle = '#fff'; ctx.fillRect(m.ax * zoom - 6, m.ay * zoom - 1, 12, 2); ctx.fillRect(m.ax * zoom - 1, m.ay * zoom - 6, 2, 12);
+  rig.parts.forEach((p, i) => {
+    const col = COLORS[i % COLORS.length];
+    if (p.poly.length) {
+      ctx.beginPath(); p.poly.forEach(([x, y], j) => j ? ctx.lineTo(x * zoom, y * zoom) : ctx.moveTo(x * zoom, y * zoom)); ctx.closePath();
+      ctx.fillStyle = col + (i === sel ? '55' : '22'); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = i === sel ? 2 : 1; ctx.stroke();
+      for (const [x, y] of p.poly) { ctx.fillStyle = col; ctx.fillRect(x * zoom - 2, y * zoom - 2, 5, 5); }
+    }
+    if (p.pivot) { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.pivot[0] * zoom, p.pivot[1] * zoom, 6, 0, Math.PI * 2); ctx.stroke(); }
+  });
+}
+$('#c').addEventListener('click', (e) => {
+  const r = $('#c').getBoundingClientRect(); const x = Math.round((e.clientX - r.left) / zoom), y = Math.round((e.clientY - r.top) / zoom);
+  if (e.shiftKey) rig.parts[sel].pivot = [x, y]; else rig.parts[sel].poly.push([x, y]);
+  render();
+});
+$('#c').addEventListener('contextmenu', (e) => { e.preventDefault(); rig.parts[sel].poly.pop(); render(); });
+window.addEventListener('keydown', (e) => { if (e.key === 'Tab') { e.preventDefault(); sel = (sel + 1) % rig.parts.length; render(); } });
+
+// ---- cutting ----
+function polyMask(poly, w, h) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const ctx = c.getContext('2d');
+  if (poly.length >= 3) { ctx.beginPath(); poly.forEach(([x, y], j) => j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fillStyle = '#fff'; ctx.fill(); }
+  const d = ctx.getImageData(0, 0, w, h).data; const m = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) m[i] = d[i * 4 + 3] > 127 ? 1 : 0;
+  return m;
+}
+export function cutParts(img, rig) {
+  const w = img.width, h = img.height;
+  const sc = document.createElement('canvas'); sc.width = w; sc.height = h; const sctx = sc.getContext('2d'); sctx.drawImage(img, 0, 0);
+  const src = sctx.getImageData(0, 0, w, h).data;
+  const masks = rig.parts.map((p) => polyMask(p.poly, w, h));
+  const out = [];
+  rig.parts.forEach((p, i) => {
+    if (!p.poly.length || !p.pivot) return;
+    const own = masks[i];
+    const front = new Uint8Array(w * h);
+    for (let j = i + 1; j < masks.length; j++) for (let k = 0; k < w * h; k++) if (masks[j][k]) front[k] = 1;
+    const px = new Uint8ClampedArray(w * h * 4);
+    const filled = new Uint8Array(w * h);
+    for (let k = 0; k < w * h; k++) if (own[k] && !front[k] && src[k * 4 + 3] > 0) { px.set(src.subarray(k * 4, k * 4 + 4), k * 4); filled[k] = 1; }
+    // in-paint the covered area from the part's own visible pixels (iterative neighbour average)
+    const hole = new Uint8Array(w * h);
+    for (let k = 0; k < w * h; k++) if (own[k] && front[k] && src[k * 4 + 3] > 0) hole[k] = 1;
+    for (let pass = 0; pass < 64; pass++) {
+      let changed = 0; const next = filled.slice();
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const k = y * w + x; if (!hole[k] || filled[k]) continue;
+        // average the filled neighbours, preferring lit pixels over the dark outline so the
+        // fill takes the material colour instead of smearing black ink into the hole
+        let r = 0, g = 0, b = 0, n = 0, rd = 0, gd = 0, bd = 0, nd = 0, pick = -1;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
+          const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue; const nk = ny * w + nx; if (!filled[nk]) continue;
+          const R = px[nk * 4], G = px[nk * 4 + 1], B = px[nk * 4 + 2];
+          if (R + G + B > 210) { r += R; g += G; b += B; n++; if (pick < 0 || Math.random() < 1 / n) pick = nk; } else { rd += R; gd += G; bd += B; nd++; }
+        }
+        // copy one lit neighbour (keeps the material's texture) with a touch of the average so seams stay soft
+        if (n) { const nk = pick; px[k * 4] = (px[nk * 4] * 2 + r / n) / 3; px[k * 4 + 1] = (px[nk * 4 + 1] * 2 + g / n) / 3; px[k * 4 + 2] = (px[nk * 4 + 2] * 2 + b / n) / 3; px[k * 4 + 3] = 255; next[k] = 1; changed++; }
+        else if (nd && pass > 2) { px[k * 4] = rd / nd; px[k * 4 + 1] = gd / nd; px[k * 4 + 2] = bd / nd; px[k * 4 + 3] = 255; next[k] = 1; changed++; }
+      }
+      filled.set(next); if (!changed) break;
+    }
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (filled[y * w + x]) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+    if (x1 < 0) return;
+    const pw = x1 - x0 + 1, ph = y1 - y0 + 1;
+    const pc = document.createElement('canvas'); pc.width = pw; pc.height = ph;
+    const id = new ImageData(pw, ph);
+    for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) { const k = ((y + y0) * w + (x + x0)) * 4; id.data.set(px.subarray(k, k + 4), (y * pw + x) * 4); }
+    pc.getContext('2d').putImageData(id, 0, 0);
+    out.push({ name: p.name, parent: p.parent, canvas: pc, off: [x0, y0], pivot: p.pivot, poly: p.poly });
+  });
+  return out;
+}
+async function exportRig() {
+  const parts = cutParts(img, rig);
+  if (!parts.length) { log('Draw a polygon (3+ points) and set a pivot (shift+click) for at least one part.'); return; }
+  const skipped = rig.parts.filter((p) => !parts.find((q) => q.name === p.name)).map((p) => p.name);
+  if (skipped.length) log('skipped parts without polygon/pivot: ' + skipped.join(', '));
+  // shelf pack into one sheet
+  const pad = 2; let x = pad, y = pad, rowH = 0; const W = 512;
+  const placed = parts.map((p) => { const w = p.canvas.width, h = p.canvas.height; if (x + w + pad > W) { x = pad; y += rowH + pad; rowH = 0; } const r = [x, y, w, h]; x += w + pad; rowH = Math.max(rowH, h); return r; });
+  const sheet = document.createElement('canvas'); sheet.width = W; sheet.height = y + rowH + pad;
+  const sctx = sheet.getContext('2d'); parts.forEach((p, i) => sctx.drawImage(p.canvas, placed[i][0], placed[i][1]));
+  const m = manifest[unitId]; const race = m.file.split('/')[0];
+  const json = { skeleton: rig.skeleton, legSwing: rig.legSwing, sheet: `${race}/${unitId}.parts.png`, parts: parts.map((p, i) => ({ name: p.name, parent: p.parent, rect: placed[i], pivot: p.pivot, off: p.off, poly: p.poly })) };
+  const blob = await new Promise((ok) => sheet.toBlob(ok, 'image/png'));
+  await saveFile(`${race}/${unitId}.parts.png`, blob);
+  await saveFile(`${race}/${unitId}.rig.json`, JSON.stringify(json, null, 1));
+  manifest[unitId].rig = `${race}/${unitId}.rig.json`;
+  await saveFile('manifest.json', JSON.stringify(manifest, null, 2));
+  log(`saved rig for ${unitId}: ${parts.length} parts, sheet ${sheet.width}x${sheet.height}`);
+  lastParts = parts;
+}
+
+// ---- preview (same maths as the game's puppet renderer) ----
+let previewing = false, lastParts = null, t0 = performance.now();
+function drawPreview() {
+  requestAnimationFrame(drawPreview);
+  const pv = $('#pv'); if (!previewing || !lastParts) { pv.width = 0; return; }
+  const s = 3, m = manifest[unitId]; pv.width = img.width * s * 2.4; pv.height = img.height * s + 20;
+  const ctx = pv.getContext('2d'); ctx.imageSmoothingEnabled = true;
+  const freeze = new URLSearchParams(location.search).get('freeze');   // ?freeze=2.3 holds the preview at that second of the 4 s cycle
+  const time = freeze != null ? +freeze : (performance.now() - t0) / 1000;
+  const cycle = time % 4, style = attackStyle(UNITS[unitId] && UNITS[unitId].look.weapon);
+  const a = cycle < 2 ? { anim: 'walk', animT: time, speed: 2.4, time, seed: 0 }
+    : cycle < 2.5 ? { anim: 'atk', state: 'attack', phase: 'windup', phaseT: cycle - 2, windup: 0.5, recover: 0.5, time, seed: 0, style }
+    : cycle < 3.2 ? { anim: 'atk', state: 'attack', phase: 'recover', phaseT: cycle - 2.5, windup: 0.5, recover: 0.7, time, seed: 0, style }
+    : { anim: 'idle', time, seed: 0 };
+  const pose = SKELETONS[rig.skeleton].pose(a);
+  if (rig.legSwing != null) for (const k of ['legF', 'legB']) pose.angles[k] *= rig.legSwing;
+  const byName = {}; for (const p of lastParts) byName[p.name] = p;
+  const world = {};
+  const place = (p) => {
+    if (world[p.name]) return world[p.name];
+    let base, ang;
+    if (p.parent && byName[p.parent]) { const par = place(byName[p.parent]); const dx = p.pivot[0] - byName[p.parent].pivot[0], dy = p.pivot[1] - byName[p.parent].pivot[1]; const c = Math.cos(-par.ang), sn = Math.sin(-par.ang); /* canvas y is down: game angles are negated */ base = [par.x + dx * c - dy * sn, par.y + dx * sn + dy * c]; ang = par.ang + (pose.angles[p.name] || 0); }
+    else { base = [p.pivot[0] + pose.dx * 75, p.pivot[1] - pose.dy * 75]; ang = pose.angles[p.name] || 0; }
+    return (world[p.name] = { x: base[0], y: base[1], ang });
+  };
+  const ox = pv.width / 2 - m.ax * s, oy = 10;
+  ctx.clearRect(0, 0, pv.width, pv.height);
+  for (const p of lastParts) {
+    const wp = place(p);
+    ctx.save(); ctx.translate(ox + wp.x * s, oy + wp.y * s); ctx.rotate(-wp.ang); ctx.scale(pose.sx, pose.sy);
+    ctx.drawImage(p.canvas, (p.off[0] - p.pivot[0]) * s, (p.off[1] - p.pivot[1]) * s, p.canvas.width * s, p.canvas.height * s);
+    ctx.restore();
+  }
+  ctx.fillStyle = '#fff'; ctx.font = '12px monospace'; ctx.fillText(a.anim + (a.phase ? ' ' + a.phase + ' (' + style + ')' : ''), 6, pv.height - 6);
+}
+drawPreview();
+window.rigDebug = { get rig() { return rig; }, get img() { return img; }, cutParts, exportRig };
+loadUnit($('#unit').value);
+</script></body></html>

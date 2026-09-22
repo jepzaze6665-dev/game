@@ -1,0 +1,308 @@
+{
+  "h_swordsman": {
+    "file": "human/h_swordsman.png",
+    "w": 41,
+    "h": 55,
+    "ax": 22,
+    "ay": 55,
+    "ppu": 24,
+    "src": "docs/human.jpg",
+    "box": [
+      511,
+      24,
+      618,
+      224
+    ],
+    "anim": "human/h_swordsman.anim.json"
+  },
+  "h_archer": {
+    "file": "human/h_archer.png",
+    "w": 33,
+    "h": 41,
+    "ax": 17,
+    "ay": 42,
+    "ppu": 24,
+    "src": "docs/human.jpg",
+    "box": [
+      196,
+      27,
+      312,
+      224
+    ],
+    "rig": "human/h_archer.rig.json",
+    "anim": "human/h_archer.anim.json"
+  },
+  "h_squire": {
+    "file": "human/h_squire.png",
+    "w": 39,
+    "h": 51,
+    "ax": 21,
+    "ay": 52,
+    "ppu": 24,
+    "src": "docs/human.jpg",
+    "box": [
+      43,
+      11,
+      158,
+      223
+    ],
+    "anim": "human/h_squire.anim.json"
+  },
+  "h_spearman": {
+    "file": "human/h_spearman.png",
+    "w": 35,
+    "h": 53,
+    "ax": 19,
+    "ay": 53,
+    "ppu": 24,
+    "src": "docs/human.jpg",
+    "box": [
+      337,
+      10,
+      452,
+      224
+    ],
+    "rig": "human/h_spearman.rig.json",
+    "anim": "human/h_spearman.anim.json"
+  },
+  "h_crossbow": {
+    "file": "human/h_crossbow.png",
+    "w": 39,
+    "h": 45,
+    "ax": 14,
+    "ay": 44,
+    "ppu": 24,
+    "src": "docs/human.jpg",
+    "box": [
+      652,
+      23,
+      805,
+      225
+    ],
+    "rig": "human/h_crossbow.rig.json",
+    "anim": "human/h_crossbow.anim.json"
+  },
+  "h_knight": {
+    "file": "human/h_knight.png",
+    "w": 43,
+    "h": 51,
+    "ax": 16,
+    "ay": 51,
+    "ppu": 24,
+    "src": "docs/human.jpg",
+    "box": [
+      831,
+      26,
+      1003,
+      271
+    ],
+    "rig": "human/h_knight.rig.json",
+    "anim": "human/h_knight.anim.json"
+  },
+  "h_royalknight": {
+    "file": "human/h_royalknight.png",
+    "w": 54,
+    "h": 84,
+    "ax": 26,
+    "ay": 86,
+    "ppu": 24,
+    "src": "docs/human.jpg",
+    "box": [
+      13,
+      256,
+      236,
+      561
+    ],
+    "rig": "human/h_royalknight.rig.json",
+    "anim": "human/h_royalknight.anim.json"
+  },
+  "h_firemage": {
+    "file": "human/h_firemage.png",
+    "w": 38,
+    "h": 47,
+    "ax": 20,
+    "ay": 46,
+    "ppu": 24,
+    "src": "docs/human.jpg",
+    "box": [
+      241,
+      344,
+      396,
+      561
+    ],
+    "rig": "human/h_firemage.rig.json",
+    "anim": "human/h_firemage.anim.json"
+  },
+  "h_paladin": {
+    "file": "human/h_paladin.png",
+    "w": 41,
+    "h": 49,
+    "ax": 20,
+    "ay": 48,
+    "ppu": 24,
+    "src": "docs/human.jpg",
+    "box": [
+      634,
+      340,
+      809,
+      559
+    ],
+    "rig": "human/h_paladin.rig.json",
+    "anim": "human/h_paladin.anim.json",
+    "animAlias": {
+      "walk": "run"
+    }
+  },
+  "h_king": {
+    "file": "human/h_king.png",
+    "w": 43,
+    "h": 55,
+    "ax": 22,
+    "ay": 56,
+    "ppu": 24,
+    "src": "docs/human.jpg",
+    "box": [
+      809,
+      287,
+      1002,
+      561
+    ],
+    "rig": "human/h_king.rig.json",
+    "anim": "human/h_king.anim.json",
+    "animAlias": {
+      "walk": "run"
+    }
+  },
+  "h_guard": {
+    "anim": "human/h_guard.anim.json",
+    "w": 42,
+    "h": 63,
+    "ax": 20,
+    "ay": 62,
+    "ppu": 24,
+    "file": "human/h_guard.png",
+    "animAlias": {
+      "walk": "run"
+    }
+  },
+  "h_priest": {
+    "anim": "human/h_priest.anim.json",
+    "w": 45,
+    "h": 53,
+    "ax": 22,
+    "ay": 53,
+    "ppu": 24,
+    "file": "human/h_priest.png"
+  },
+  "d_imp": {
+    "anim": "demon/d_imp.anim.json",
+    "w": 38,
+    "h": 44,
+    "ax": 18,
+    "ay": 44,
+    "ppu": 24,
+    "file": "demon/d_imp.png"
+  },
+  "d_ravager": {
+    "anim": "demon/d_ravager.anim.json",
+    "w": 59,
+    "h": 55,
+    "ax": 22,
+    "ay": 54,
+    "ppu": 24,
+    "file": "demon/d_ravager.png"
+  },
+  "d_chainlash": {
+    "anim": "demon/d_chainlash.anim.json",
+    "w": 60,
+    "h": 57,
+    "ax": 41,
+    "ay": 57,
+    "ppu": 24,
+    "file": "demon/d_chainlash.png"
+  },
+  "d_slinger": {
+    "anim": "demon/d_slinger.anim.json",
+    "w": 47,
+    "h": 50,
+    "ax": 20,
+    "ay": 50,
+    "ppu": 24,
+    "file": "demon/d_slinger.png"
+  },
+  "d_hound": {
+    "anim": "demon/d_hound.anim.json",
+    "w": 65,
+    "h": 47,
+    "ax": 32,
+    "ay": 45,
+    "ppu": 24,
+    "file": "demon/d_hound.png",
+    "animAlias": {
+      "walk": "run"
+    }
+  },
+  "d_doombringer": {
+    "anim": "demon/d_doombringer.anim.json",
+    "w": 67,
+    "h": 62,
+    "ax": 26,
+    "ay": 60,
+    "ppu": 24,
+    "file": "demon/d_doombringer.png"
+  },
+  "d_chopper": {
+    "anim": "demon/d_chopper.anim.json",
+    "w": 53,
+    "h": 57,
+    "ax": 26,
+    "ay": 56,
+    "ppu": 24,
+    "file": "demon/d_chopper.png"
+  },
+  "d_brute": {
+    "anim": "demon/d_brute.anim.json",
+    "w": 89,
+    "h": 69,
+    "ax": 43,
+    "ay": 68,
+    "ppu": 24,
+    "file": "demon/d_brute.png"
+  },
+  "d_sorcerer": {
+    "anim": "demon/d_sorcerer.anim.json",
+    "w": 54,
+    "h": 54,
+    "ax": 22,
+    "ay": 56,
+    "ppu": 24,
+    "file": "demon/d_sorcerer.png"
+  },
+  "d_stalker": {
+    "anim": "demon/d_stalker.anim.json",
+    "w": 51,
+    "h": 51,
+    "ax": 24,
+    "ay": 51,
+    "ppu": 24,
+    "file": "demon/d_stalker.png"
+  },
+  "d_warlord": {
+    "anim": "demon/d_warlord.anim.json",
+    "w": 61,
+    "h": 61,
+    "ax": 30,
+    "ay": 62,
+    "ppu": 24,
+    "file": "demon/d_warlord.png"
+  },
+  "d_behemoth": {
+    "anim": "demon/d_behemoth.anim.json",
+    "w": 84,
+    "h": 84,
+    "ax": 40,
+    "ay": 85,
+    "ppu": 24,
+    "file": "demon/d_behemoth.png"
+  }
+}

@@ -5,12 +5,31 @@ import { ECONOMY, BASE_STATS, UNITS } from '../data/units.js';
 
 const ARMOR_TYPES = new Set(['physical', 'pierce']);   // damage types reduced by armour
 
+// Fraction of a physical hit that gets through `armor`. Heavy blows punch
+// through, small hits are blunted, but never below the floor - so swarm races
+// are weakened by armour without becoming useless against it.
+export function armorFactor(dmg, armor) {
+  if (!(armor > 0)) return 1;
+  return Math.max(0.45, 1 - armor / (armor + dmg + 6));
+}
+
+// Tags every unit of a race carries. A counter against one of these hits the
+// whole enemy roster, so it is capped well below a normal role counter.
+const RACE_WIDE_TAGS = new Set(['UNDEAD', 'MECHANICAL']);
+const RACE_WIDE_BONUS = 1.2;
+
+const WEAKNESS_BONUS = 1.3;   // a unit's listed weaknesses are real: those attackers hit it harder
+
 // Tag-based multiplier of attacker definition against a victim (unit or base).
+// Uses the attacker's strongAgainst list and the victim's weakAgainst list
+// (the larger applies), so every unit has a counter the codex can show honestly.
 export function counterMultiplier(def, victim) {
   if (victim.isBase) return def.bonusVsBase || 1;
-  const tags = victim.type.counterTags;
+  const vdef = victim.type;
+  const tags = vdef.counterTags;
   let m = 1;
-  for (const t of def.strongAgainst) if (tags.includes(t)) { m = Math.max(m, def.bonus || 1.5); }
+  for (const t of def.strongAgainst) if (tags.includes(t)) { m = Math.max(m, RACE_WIDE_TAGS.has(t) ? Math.min(RACE_WIDE_BONUS, def.bonus || 1.5) : (def.bonus || 1.5)); }
+  if (m < WEAKNESS_BONUS && vdef.weakAgainst && def.counterTags) for (const t of vdef.weakAgainst) if (def.counterTags.includes(t)) { m = WEAKNESS_BONUS; break; }
   return m;
 }
 
@@ -67,16 +86,17 @@ export function applyDamage(battle, attacker, victim, extraMult = 1, opts = {}) 
   const armor = victim.type.armor || 0;
   let blocked = false;
   if (armor > 0 && ARMOR_TYPES.has(def.damageType) && !def.armorPiercing) {
-    const after = Math.max(dmg * 0.45, dmg - armor);
+    const after = dmg * armorFactor(dmg, armor);
     blocked = after < dmg * 0.8;
     dmg = after;
   }
   dmg *= defenseMultiplier(victim, def, ranged);
-  dmg = Math.max(1, Math.round(dmg));
+  dmg = Math.max(1, dmg);   // fractional: rounding would punish low-damage swarm units twice
   victim.hp -= dmg;
   victim.flash = 1;
   victim.hitStun = Math.max(victim.hitStun, opts.stun || 0.05);
   victim.lastHitBy = attacker.team;
+  victim.lastHitRanged = ranged;
   if (opts.knockback) {
     const dir = Math.sign(victim.x - attacker.x) || attacker.dir;
     const k = opts.knockback / Math.max(0.5, victim.type.mass);
@@ -87,7 +107,7 @@ export function applyDamage(battle, attacker, victim, extraMult = 1, opts = {}) 
   if (def.slow && !opts.noStatus) victim.slow = { pct: def.slow.pct, t: def.slow.dur };
   if (def.lifesteal) healUnit(attacker, dmg * def.lifesteal);
   battle.events.push({
-    type: 'hit', x: victim.x, y: victim.y + 0.6, dmg, team: victim.team, kind: def.id,
+    type: 'hit', x: victim.x, y: victim.y + 0.6, dmg: Math.round(dmg), team: victim.team, kind: def.id,
     counter: counter > 1.01, charge: !!opts.charge, big: dmg >= 40 || !!opts.charge, splash: !!opts.splash, blocked, magic: !ARMOR_TYPES.has(def.damageType),
   });
   if (victim.hp <= 0) { victim.hp = 0; killUnit(battle, victim, attacker); }

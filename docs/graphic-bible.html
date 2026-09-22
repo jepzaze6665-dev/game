@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bannerfall — Graphic Bible</title>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500&display=swap" rel="stylesheet">
+<!-- The real UI kit: every panel, button and unit card on this page is the game's own CSS. -->
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/races.css">
+<style>
+  /* This document is a scrolling page; undo the game's fixed full-screen rules. */
+  html, body { overflow: auto; height: auto; user-select: text; -webkit-user-select: text; font-size: 16px; }
+  body { background: var(--bg); color: var(--text); }
+  #rotate { display: none !important; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 80px; }
+  header.hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px; padding: 28px 0 18px; border-bottom: 3px solid var(--border); margin-bottom: 8px; }
+  header.hero h1 { font-size: clamp(16px, 3vw, 28px); color: var(--gold); text-shadow: 4px 4px 0 #000; line-height: 1.5; }
+  header.hero .sub { color: var(--muted); font-size: 15px; max-width: 640px; line-height: 1.45; }
+  nav.toc { position: sticky; top: 0; z-index: 10; background: rgba(15,15,30,.94); border-bottom: 3px solid var(--border-dark); margin: 0 -16px 24px; padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 4px 10px; font-family: var(--font-head); font-size: 7px; letter-spacing: 1px; }
+  nav.toc a { color: var(--muted); text-decoration: none; padding: 4px 2px; }
+  nav.toc a:hover { color: var(--gold); }
+  section { margin: 0 0 44px; scroll-margin-top: 64px; }
+  section > h2 { font-size: 13px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid var(--border-dark); }
+  section > h2 small { font-family: var(--font-body); font-size: 14px; color: var(--muted); text-shadow: none; margin-left: 10px; }
+  h3 { margin: 18px 0 8px; font-size: 9px; color: var(--gold); }
+  p { line-height: 1.5; margin: 6px 0; max-width: 78ch; }
+  ul { line-height: 1.5; margin: 6px 0; padding-left: 20px; max-width: 78ch; }
+  .rule { border-left: 4px solid var(--gold); background: var(--panel); padding: 10px 14px; margin: 10px 0; max-width: 78ch; }
+  .rule b { color: var(--gold); }
+  .note { border-left: 4px solid var(--blue); background: var(--panel); padding: 10px 14px; margin: 10px 0; color: var(--muted); max-width: 78ch; font-size: 14px; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .box { background: var(--panel); border: 3px solid var(--border-dark); box-shadow: inset 0 0 0 2px var(--border); padding: 12px 14px; }
+  .box h4 { margin: 0 0 8px; font-family: var(--font-head); font-size: 8px; color: var(--muted); letter-spacing: 1px; }
+  .good li { color: var(--green); } .bad li { color: var(--red-light); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border-dark); vertical-align: middle; }
+  th { font-family: var(--font-head); font-size: 7px; color: var(--muted); letter-spacing: 1px; background: var(--panel); }
+  td.num { font-family: var(--font-head); font-size: 9px; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+  .strip { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; padding: 10px; background: var(--panel-2); border: 3px solid var(--border-dark); }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: var(--font-head); font-size: 6px; color: var(--muted); text-align: center; }
+  .cell.grass { background: #5fae4a; padding: 6px; }
+  .cell.anchor { position: relative; }
+  .sw { display: inline-flex; flex-direction: column; align-items: stretch; width: 74px; font-family: var(--font-head); font-size: 6px; color: var(--muted); }
+  .sw i { display: block; height: 34px; border: 2px solid var(--border-dark); }
+  .sw b { font-weight: normal; padding: 3px 0; color: var(--text); }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+  .race-head { display: flex; align-items: center; gap: 14px; margin: 24px 0 8px; }
+  .race-head h3 { margin: 0; font-size: 12px; }
+  .race-head .tag { font-size: 6px; }
+  .lane { position: relative; height: 90px; background: linear-gradient(180deg, #5fae4a 0 22%, #c9a16a 22% 78%, #5fae4a 78%); border: 3px solid var(--border-dark); font-family: var(--font-head); font-size: 7px; color: #fff; text-shadow: 2px 2px 0 #000; }
+  .lane span { position: absolute; top: 50%; transform: translateY(-50%); }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 14px; }
+  .kv b { font-family: var(--font-head); font-size: 8px; color: var(--muted); align-self: center; }
+  .crowd { position: relative; background: #5fae4a; border: 3px solid var(--border-dark); }
+  .crowd .lbl { position: absolute; left: 6px; top: 6px; font-family: var(--font-head); font-size: 7px; text-shadow: 2px 2px 0 #000; }
+  .hudmock { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; padding: 10px; background: #2c7a2a; border: 3px solid var(--border-dark); }
+  .hudmock .r { display: flex; flex-direction: column; gap: 6px; } .hudmock .r.right { align-items: flex-end; }
+  .bar { height: 12px; width: 220px; border: 2px solid var(--border-dark); background: #1a1a30; box-shadow: inset 0 0 0 1px var(--border); }
+  .bar i { display: block; height: 100%; width: 72%; background: linear-gradient(180deg, #62a0ff, #2a63c9); }
+  .bar.e i { width: 58%; background: linear-gradient(180deg, #ff6b6b, #b91c1c); margin-left: auto; }
+  .cards { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; padding: 10px; background: linear-gradient(180deg, #2c7a2a, rgba(8,8,20,.85) 60%); border: 3px solid var(--border-dark); }
+  .ucard { pointer-events: none; }
+  .fx-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fx-grid .cell { width: 64px; background: var(--panel-2); padding: 6px 2px; }
+  .fx-grid .cell.dark { background: #2a4a2a; }
+  .prompt { white-space: pre-wrap; font-family: var(--font-body); font-size: 14px; background: var(--panel); border: 3px solid var(--border-dark); padding: 12px 14px; line-height: 1.45; max-width: 78ch; }
+  .prio { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: var(--font-head); font-size: 9px; }
+  .prio span { background: var(--panel-3); border: 3px solid var(--border-dark); padding: 10px 12px; }
+  .prio i { color: var(--gold); font-style: normal; }
+  .foot { color: var(--muted); font-size: 13px; border-top: 2px solid var(--border-dark); padding-top: 12px; }
+  @media (max-width: 720px) { .kv { grid-template-columns: 1fr; } .hudmock { grid-template-columns: 1fr; } .bar { width: 100%; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <h1>BANNERFALL: FOUR REALMS<br>GRAPHIC BIBLE</h1>
+      <div class="sub">The art, animation and UI standard for the game. Every sprite, palette, icon and UI element on this page is rendered <b>live from the game code</b>, so what you see here is exactly what ships. When the code changes, this page changes with it.</div>
+    </div>
+    <div class="box" style="min-width:220px"><h4>STATUS</h4><div class="kv" id="status"></div></div>
+  </header>
+
+  <nav class="toc" id="toc"></nav>
+
+  <!-- 1 -->
+  <section id="s1"><h2>1 · CORE VISUAL IDENTITY</h2>
+    <p><b>Original 2D pixel-art browser strategy game.</b> Large groups of small, readable units fight side-versus-side on a wide field. Compact colourful characters, clear silhouettes, simple but expressive animation and a strong arcade battle HUD. The look is inspired by the general principles of classic browser lane-battle games (density, scale, composition, HUD placement) — never by any specific game's art. All characters, buildings, icons, effects and UI are original and generated by our own procedural rig.</p>
+    <div class="cols">
+      <div class="box"><h4>STYLE</h4><ul><li>Chunky pixel art, integer-scaled, nearest-neighbour — never blurred</li><li>Colourful cartoon fantasy / sci-fi</li><li>Slightly exaggerated proportions, oversized heads and weapons</li><li>One-pixel dark outline (<code id="k-outline"></code>) on every sprite</li><li>Simple shapes, controlled detail, subtle two-step shading</li><li>Bright but controlled colours; team read first, race second</li></ul></div>
+      <div class="box good"><h4>THE GAME SHOULD FEEL</h4><ul><li>Energetic</li><li>Strategic</li><li>Readable at a glance</li><li>Nostalgic</li><li>Polished and lightweight</li></ul></div>
+      <div class="box bad"><h4>AVOID</h4><ul><li>Photorealism or military-sim realism</li><li>3D models, cinematic lighting</li><li>Excessive particles that hide the fight</li><li>Muddy or dark palettes</li><li>Tiny unreadable detail</li><li>Modern mobile / SaaS UI clutter</li><li>Imitating existing games' assets</li></ul></div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="s2"><h2>2 · CAMERA AND BATTLEFIELD</h2>
+    <p>Fixed orthographic camera, slight top-down tilt implied by the sprites (feet lower than heads, shadows below). No rotation, no zoom, no orbit: the field is always visually stable. Units move horizontally.</p>
+    <div class="lane"><span style="left:10px">YOUR BASE · LEFT</span><span style="left:50%;transform:translate(-50%,-50%)">→ → → PLAYER PUSHES RIGHT · ENEMY PUSHES LEFT ← ← ←</span><span style="right:10px">ENEMY BASE · RIGHT</span></div>
+    <div class="kv" id="lane-kv" style="margin-top:10px"></div>
+    <h3>GROUND THEMES</h3>
+    <p>A dirt lane on a grass field. Each campaign theme recolours the same field generator: four grass tones, three dirt tones, stone, flowers, trees, optional water. The battlefield stays clean — decoration lives outside the lane.</p>
+    <div id="themes"></div>
+    <div class="rule"><b>Density targets:</b> 10–30 units comfortable · 30–60 busy but readable · 60+ still organised (see §18 for the live crowd test). The engine supports 220 units per team.</div>
+  </section>
+
+  <!-- 3 -->
+  <section id="s3"><h2>3 · UNIT SCALE <small>source cells, world scale and the ground anchor</small></h2>
+    <p>Sprites are authored at native pixel resolution in small cells and drawn at <b>12 pixels per world unit</b>, then the whole frame is scaled by an integer (×1 to ×3 depending on window size). A humanoid is 30×32 source pixels: ~60–96 screen pixels tall on a desktop display. Every body type has its own cell.</p>
+    <table id="cells"></table>
+    <div class="rule"><b>Ground anchor rule.</b> Every cell has a fixed anchor <code>(cx, fy)</code>: the feet sit on row <code>fy</code>, horizontally centred on <code>cx</code>. The renderer places the anchor on the unit's world position and draws the shadow at the same point. Nothing floats, nothing sinks — a unit that violates the anchor is a bug, not a style choice.</p></div>
+    <div id="anchors" class="strip"></div>
+  </section>
+
+  <!-- 4 -->
+  <section id="s4"><h2>4 · CHARACTER PROPORTIONS</h2>
+    <p>Stylised, not realistic: an oversized head, compact torso, readable limbs, large recognisable weapon. The humanoid drawer has three size presets shared by the whole roster, so proportions never drift between artists or races.</p>
+    <table id="sizes"></table>
+    <p>At small size the player must identify, without zooming: <b>1. race</b> (palette + headgear), <b>2. class</b> (weapon + body), <b>3. threat level</b> (body size + gold trim), <b>4. weapon type</b> (silhouette).</p>
+  </section>
+
+  <!-- 5 -->
+  <section id="s5"><h2>5 · SILHOUETTE RULE</h2>
+    <p>Every unit must have a unique silhouette. Below, one race's 12 units are filled solid: if two shapes read the same, one of them needs a different weapon, headgear or body.</p>
+    <div id="silhouettes"></div>
+    <div class="cols" style="margin-top:12px">
+      <div class="box"><h4>CLASS SILHOUETTES</h4><ul><li><b>Sword</b> — blade clearly visible, compact armoured body</li><li><b>Spear / halberd</b> — long diagonal line extends the silhouette</li><li><b>Archer</b> — bow arc, lighter body, quiver</li><li><b>Heavy / tank</b> — big body preset, shield or plate mass</li><li><b>Mage / priest</b> — staff with gem, robe hides legs</li><li><b>Assassin</b> — narrow body, dual curved weapons</li><li><b>Machine</b> — mech, vehicle or robot body; metal legs</li><li><b>Undead</b> — bandage wrap, skull, jackal mask, unusual posture</li></ul></div>
+      <div class="box bad"><h4>NEVER</h4><ul><li>Two units that differ only by colour</li><li>A weapon hidden behind the body in the idle pose</li><li>A higher tier that is "the same unit, bigger numbers"</li></ul></div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="s6"><h2>6 · FOUR RACES <small>identity, palette, emblem, base and full roster</small></h2>
+    <p>Race colours live in <code>src/data/races.js</code> (UI) and each roster file's palette constant (sprites). Team colour (blue player / red enemy) is a separate token layer: any palette entry marked <code>T</code> becomes the team colour at build time, so every race exists in both a blue and a red version.</p>
+    <div id="races"></div>
+  </section>
+
+  <!-- 7 -->
+  <section id="s7"><h2>7 · CHARACTER TIERS</h2>
+    <p>Each race has 12 units in the same twelve roles, unlocked left to right on the deployment bar. Cost rises with tier; the value normaliser (<code>src/data/balance.js</code>) keeps value-per-gold on one curve for all races. Visually, higher tiers must bring a <b>new silhouette, new equipment, new effects and a stronger identity</b> — not a scaled-up copy.</p>
+    <table id="tiers"></table>
+  </section>
+
+  <!-- 8 -->
+  <section id="s8"><h2>8 · SPRITE SHEET STANDARD</h2>
+    <p>Frames are generated by the rig (<code>src/art/rig.js</code>) and packed into one 2048² atlas at load time. The per-unit set is deliberately small so 400+ units animate cheaply:</p>
+    <table>
+      <tr><th>SET</th><th>FRAMES</th><th>NOTES</th></tr>
+      <tr><td>Idle</td><td class="num">1</td><td>Also used as the HUD icon</td></tr>
+      <tr><td>Walk</td><td class="num">4</td><td>stride / bob cycle, arm swing</td></tr>
+      <tr><td>Attack</td><td class="num">3</td><td>anticipation → impact → recovery, chosen per weapon (§9)</td></tr>
+      <tr><td>Hurt</td><td class="num">1</td><td>lean back, weapon down, eyes closed; plus a white flash and jitter in the renderer</td></tr>
+      <tr><td>Death</td><td class="num">0</td><td>renderer rotates the idle frame 90° over 0.3 s and fades it out — no gore, no extra frames</td></tr>
+      <tr><td>Downed / revive</td><td class="num">0</td><td>rotated frame pulsing in alpha until the unit rises (undead)</td></tr>
+    </table>
+    <p>Both team versions of every frame are prebuilt (blue and red). Transparent background only; no scenery inside a sprite.</p>
+    <div id="sheet"></div>
+  </section>
+
+  <!-- 9 -->
+  <section id="s9"><h2>9 · ANIMATION STYLE</h2>
+    <p>Fast, readable, slightly exaggerated, arcade-like. Three-frame attacks with a clear anticipation pose, a strong impact pose (with the slash / cast flag that triggers the effect) and a short recovery. The attack set is chosen by weapon, so a new unit gets correct motion for free:</p>
+    <table id="attacks"></table>
+    <div class="kv" style="margin-top:10px"><b>IDLE</b><span>single frame; life comes from the renderer (spawn hop, flyer hover, cheer bounce)</span><b>WALK</b><span>4-frame cycle: legs alternate lift, body bobs one pixel, arm swings 65°–100°; heavy bodies kick up dust</span><b>HIT</b><span>hurt frame + white flash + 0.12-unit jitter for the hit-stun duration</span><b>DEATH</b><span>topple away from the killer, fade; big units also shake the camera</span></div>
+  </section>
+
+  <!-- 10 -->
+  <section id="s10"><h2>10 · UNIT SHADOWS</h2>
+    <p>Every unit has a soft elliptical shadow directly under its feet. Shadows are <b>team-tinted</b> (blue / red) — the single most important friend-or-foe read in a scrum, because it stays visible under overlapping sprites.</p>
+    <div id="shadows" class="strip"></div>
+    <table>
+      <tr><th>BODY</th><th>SHADOW FRAME</th><th>SCALE</th></tr>
+      <tr><td>bug, small</td><td>shadow (9×4)</td><td class="num">×0.8</td></tr>
+      <tr><td>humanoid, flyer</td><td>shadow (9×4)</td><td class="num">×1.0</td></tr>
+      <tr><td>mount, mech, quad</td><td>shadow (9×4)</td><td class="num">×1.5</td></tr>
+      <tr><td>big, giant, vehicle</td><td>shadow_big (17×7)</td><td class="num">×1.0</td></tr>
+    </table>
+  </section>
+
+  <!-- 11 -->
+  <section id="s11"><h2>11 · COMBAT VISUAL EFFECTS</h2>
+    <p>Effects are short and small; they mark <i>where</i> something happened and never cover the fight. <b>Readability &gt; spectacle.</b> All effect sprites below are the real atlas frames.</p>
+    <div id="fx" class="fx-grid"></div>
+    <h3>PROJECTILES</h3>
+    <table id="projectiles"></table>
+    <div class="kv" style="margin-top:10px"><b>MELEE HIT</b><span>white slash chevron + 2-frame impact star; damage number floats up (bigger for counters / charges)</span><b>MAGIC</b><span>small glowing bolt with a trail; compact burst on impact</span><b>FIRE</b><span>flame burst + burning tint on the victim (orange)</span><b>SLOW</b><span>green tint on the victim, small status icon above the health bar</span><b>SIEGE</b><span>base flash, heavy numbers, camera shake for big hits</span></div>
+  </section>
+
+  <!-- 12 -->
+  <section id="s12"><h2>12 · UI VISUAL LANGUAGE <small>HUD layout</small></h2>
+    <p>The HUD is HTML/CSS over the canvas, built from the same pixel kit as the menus. Top: player info left, timer and both base bars centre, enemy info right. Bottom: the 12-card deployment bar. The mock below uses the game's real CSS classes.</p>
+    <div class="hudmock">
+      <div class="r"><div class="hud-chip gold"><canvas class="ico" id="ico-coin"></canvas><span class="val">248</span><span class="sub">+12/s</span></div><div class="hud-chip army-p"><span class="val">37</span><span class="sub">ARMY</span></div></div>
+      <div class="r" style="align-items:center"><div class="pixel-text" style="font-size:12px">YOUR CASTLE &nbsp; <span class="gold">2:41</span> &nbsp; ENEMY FORTRESS</div><div style="display:flex;gap:8px"><div class="bar"><i></i></div><div class="bar e"><i></i></div></div><div class="pixel-text" style="font-size:22px"><span class="blue">15</span> <span class="muted" style="font-size:10px">VS</span> <span class="red">9</span></div></div>
+      <div class="r right"><div class="hud-chip army-e"><span class="val">29</span><span class="sub">ENEMY</span></div><div class="hud-btns"><button class="btn small">2X</button><button class="btn small">❚❚</button></div></div>
+    </div>
+    <h3>DEPLOYMENT CARDS</h3>
+    <p>Each card: hotkey (top-left), squad size (top-right), icon, name, cost. States: <b>affordable</b> (gold inner border, gold cost), <b>poor</b> (desaturated, red cost), <b>cooldown</b> (dark fill rising from the bottom with seconds), <b>locked</b> (grey, padlock), <b>recommended</b> (pulsing glow, COUNTER! ribbon).</p>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <!-- 13 -->
+  <section id="s13"><h2>13 · UI STYLE <small>tokens from css/style.css</small></h2>
+    <p>Dark semi-transparent panels, bevelled 3-px borders with an inner dark line, chamfered corners (clip-path), a hard drop shadow instead of blur. Two fonts only: <b>Press Start 2P</b> for headings, numbers and labels; <b>Pixelify Sans</b> for body copy. No glassmorphism, no soft gradients, no rounded SaaS buttons, no neon.</p>
+    <div class="swatches" id="tokens"></div>
+    <div class="strip" style="gap:14px;align-items:center">
+      <div class="panel" style="padding:10px 14px"><h2 style="font-size:11px">PANEL</h2><p class="muted" style="margin:4px 0 0;font-size:13px">bevel + chamfer + hard shadow</p></div>
+      <button class="btn primary">PRIMARY</button><button class="btn blue">BLUE</button><button class="btn red">RED</button><button class="btn">DEFAULT</button><button class="btn ghost">GHOST</button>
+      <span class="tag">TAG</span><span class="tag easy">EASY</span><span class="tag normal">NORMAL</span><span class="tag hard">HARD</span><span class="tag brutal">BRUTAL</span>
+    </div>
+  </section>
+
+  <!-- 14 -->
+  <section id="s14"><h2>14 · ICON DESIGN</h2>
+    <p>A unit's icon <b>is</b> its idle frame, drawn at an integer scale that fits a 44-px box (32 px on phones). The icon can never drift from the battlefield sprite because it is the same pixels. Icons are always the player (blue) version.</p>
+    <div id="icons" class="strip"></div>
+  </section>
+
+  <!-- 15 -->
+  <section id="s15"><h2>15 · BASE DESIGN</h2>
+    <p>Four original bases in a 76×84 cell with four damage states (intact → rubble). A base is recognisable but must not dominate the lane; it sits at the far left / right with its banner in team colour.</p>
+    <div id="bases"></div>
+  </section>
+
+  <!-- 16 -->
+  <section id="s16"><h2>16 · COLOR SYSTEM</h2>
+    <div class="cols">
+      <div class="box"><h4>LAYER 1 · TEAM</h4><div class="swatches" id="team-sw"></div><p style="font-size:14px">Cloth, banners, gems and shadows marked <code>T</code>/<code>t</code>/<code>L</code> take the team colour. Team must read before anything else.</p></div>
+      <div class="box"><h4>LAYER 2 · RACE</h4><div class="swatches" id="race-sw"></div><p style="font-size:14px">Skin, armour, trim and accent are race constants (§6). Human steel &amp; gold, Demon crimson &amp; orange, Robot cyan &amp; grey, Mummy sand &amp; turquoise.</p></div>
+      <div class="box"><h4>LAYER 3 · SHARED MATERIALS</h4><div class="swatches" id="mat-sw"></div><p style="font-size:14px">Metal, wood, gold, bone and outline are global constants so weapons look consistent across races.</p></div>
+    </div>
+    <div class="rule"><b>Never rely on colour alone</b> to say what a unit is. Silhouette + equipment + colour work together; colour-blind players still get team from shadow brightness and race from shape.</div>
+  </section>
+
+  <!-- 17 -->
+  <section id="s17"><h2>17 · READABILITY TEST</h2>
+    <p>Every unit passes three checks. Pick a unit to see it at the three integer screen scales the renderer actually uses, then in a 25-unit scrum.</p>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0"><select id="pick" class="btn small" style="min-height:32px"></select><span class="muted" style="font-size:13px">Test 1: recognisable at ×3 · Test 2: at ×1 · Test 3: class still readable in the crowd</span></div>
+    <div id="readability" class="strip"></div>
+  </section>
+
+  <!-- 18 -->
+  <section id="s18"><h2>18 · CROWD BATTLE TEST <small>live</small></h2>
+    <p>Four scenes drawn with the real frames, shadows and draw order (sorted by lane depth). Check overlap, faction distinction, shadow read and projectile visibility. Click a scene to reshuffle.</p>
+    <div class="cols" id="crowds" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr))"></div>
+  </section>
+
+  <!-- 19 -->
+  <section id="s19"><h2>19 · TECHNICAL ART REQUIREMENTS</h2>
+    <div class="kv" id="tech"></div>
+    <div class="note">The renderer draws the whole world into a low-resolution canvas (window ÷ integer scale) and lets CSS stretch it with <code>image-rendering: pixelated</code>. One instanced quad batch draws every sprite from the single atlas texture with nearest filtering; there is exactly one draw call for all units, effects and bases.</div>
+  </section>
+
+  <!-- 20 -->
+  <section id="s20"><h2>20 · ASSET STRUCTURE</h2>
+    <p>There are no image files. Every asset is code, which is why this bible can render itself. If a hand-painted asset is ever introduced it must be packed into the same atlas at the same cell sizes and anchors.</p>
+    <table>
+      <tr><th>WHAT</th><th>WHERE</th></tr>
+      <tr><td>Unit look (body, palette, hat, weapon, extras)</td><td><code>src/data/roster/&lt;race&gt;.js</code> → <code>look: {…}</code></td></tr>
+      <tr><td>Unit rig, cells, animation tables</td><td><code>src/art/rig.js</code>, <code>src/art/rigParts.js</code> (headgear, weapons, shields)</td></tr>
+      <tr><td>Effects, projectiles, status icons, emblems</td><td><code>src/art/fxSprites.js</code></td></tr>
+      <tr><td>Bases (4 styles × 4 damage states)</td><td><code>src/art/baseSprites.js</code></td></tr>
+      <tr><td>Ground themes</td><td><code>src/render/Ground.js</code></td></tr>
+      <tr><td>Atlas packing, instanced batch, effects playback</td><td><code>src/render/Atlas.js</code>, <code>SpriteBatch.js</code>, <code>Effects.js</code></td></tr>
+      <tr><td>UI kit (tokens, panels, buttons, cards, HUD)</td><td><code>css/style.css</code>, <code>css/races.css</code>, <code>src/ui/</code></td></tr>
+    </table>
+  </section>
+
+  <!-- 21 -->
+  <section id="s21"><h2>21 · CHARACTER DESIGN WORKFLOW</h2>
+    <ol style="line-height:1.6;max-width:78ch">
+      <li>Read this bible; check the race's palette and existing silhouettes (§5, §6).</li>
+      <li>Design the unit as a <code>look</code>: body preset, palette, headgear, weapon, extras. Prefer an existing part; add a new part to <code>rigParts.js</code> only when the silhouette needs it.</li>
+      <li>Check it in the atlas viewer (<code>tools/atlas.html?s=6&amp;f=&lt;id&gt;</code>): anchor, outline, both team versions, all frames.</li>
+      <li>Run the readability test (§17) and the crowd test (§18) on this page.</li>
+      <li>Lock the style: compare against the other 11 units of the race in the roster screen.</li>
+      <li>Test in a real battle (<code>?bg=1</code>, <code>GAME.startBattle</code>, <code>GAME.autoplay</code>).</li>
+      <li>Run <code>npm test</code> and the balance matrix if stats changed.</li>
+    </ol>
+    <div class="rule"><b>Never</b> design all 48 units independently. New parts must be shared by at least the race's other units where sensible; a one-off detail that nobody else uses is usually noise.</div>
+  </section>
+
+  <!-- 22 -->
+  <section id="s22"><h2>22 · CONCEPT ART &amp; AI-GENERATION RULES</h2>
+    <p>When concept art (hand-drawn or AI-generated) is used to explore a unit before it is built in the rig, it must follow these priorities and constraints. Concept art is reference for the rig, never a shipped asset.</p>
+    <div class="cols">
+      <div class="box good"><h4>PRIORITISE</h4><ol style="padding-left:18px"><li>Silhouette</li><li>Readability</li><li>Consistent proportions (§4)</li><li>Faction identity (§6)</li><li>Weapon readability</li><li>Animation compatibility (§9)</li><li>Visual hierarchy by tier (§7)</li></ol></div>
+      <div class="box bad"><h4>DO NOT</h4><ul><li>Excessive detail, cinematic backgrounds</li><li>Photorealistic rendering</li><li>Cropping, text, logos, UI or scenery in the image</li><li>Copying any existing game's character, costume, weapon or artwork</li></ul></div>
+      <div class="box"><h4>OUTPUT</h4><ul><li>Full body, feet visible, complete weapon</li><li>Front / three-quarter game view, facing right</li><li>Centred on a plain or transparent background</li><li>Flat colour blocks with two-step shading</li></ul></div>
+    </div>
+  </section>
+
+  <!-- 23 -->
+  <section id="s23"><h2>23 · MASTER CHARACTER PROMPT</h2>
+    <p>Template for a concept brief. The bracketed fields come straight from the roster data (name, race, role, description) — pick a unit to fill it in.</p>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0"><select id="pick2" class="btn small" style="min-height:32px"></select><button class="btn small" id="copy">COPY</button></div>
+    <div class="prompt" id="prompt"></div>
+  </section>
+
+  <!-- 24 -->
+  <section id="s24"><h2>24 · FINAL QUALITY STANDARD</h2>
+    <p>The finished game looks like a polished, original classic browser strategy battle with hundreds of small visual decisions serving play. At any moment the player must instantly see: who they are (blue, left), who the enemy is (red, right), where units are moving, which are fighting, which card is selected, how much gold they have, and how much base health remains.</p>
+    <div class="prio"><span><i>READABILITY</i></span>›<span>CONSISTENCY</span>›<span>GAMEPLAY CLARITY</span>›<span>PERFORMANCE</span>›<span>STYLE DETAIL</span></div>
+    <p style="margin-top:12px">Never sacrifice readability for visual complexity.</p>
+  </section>
+
+  <div class="foot">Bannerfall: Four Realms · Graphic Bible · rendered live from the repository at page load · open via <code>node tools/serve.mjs 8765</code> → <code>/docs/graphic-bible.html</code></div>
+</div>
+
+<script type="module">
+import { Atlas } from '../src/render/Atlas.js';
+import { UNITS, RACE_UNITS, RACES, RACE_ORDER, TEAM, TEAM_COLORS, ECONOMY, LANE, BASE_STATS } from '../src/data/units.js';
+import { CELLS, SIZES, WALK, ATTACK, ATTACK_BY_WEAPON, attackSet, buildUnitFrames } from '../src/art/rig.js';
+import { K, METAL, METAL_D, METAL_DD, WOOD, WOOD_D, GOLD, GOLD_D, BONE, BONE_D } from '../src/art/rigParts.js';
+import { THEMES } from '../src/render/Ground.js';
+import { PROJECTILES } from '../src/sim/Projectiles.js';
+import { PPU } from '../src/render/Renderer.js';
+import { unitIcon } from '../src/ui/icons.js';
+import { HUMAN_UNITS } from '../src/data/roster/human.js';
+
+const $ = (s) => document.querySelector(s);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const atlas = new Atlas();
+const P = TEAM.PLAYER, E = TEAM.ENEMY;
+
+// ---- helpers ----
+function frameCanvas(key, scale = 3, flip = false) {
+  const f = atlas.frame(key);
+  const c = document.createElement('canvas'); c.width = f.w * scale; c.height = f.h * scale;
+  const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  if (flip) { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(atlas.canvas, f.x, f.y, f.w, f.h, 0, 0, c.width, c.height);
+  return c;
+}
+function cell(canvas, label, cls = '') { const d = el('div', 'cell ' + cls); d.appendChild(canvas); if (label) d.appendChild(el('span', null, label)); return d; }
+function swatch(hex, name) { const s = el('div', 'sw'); const i = el('i'); i.style.background = hex; s.appendChild(i); s.appendChild(el('b', null, name)); s.appendChild(el('span', null, hex)); return s; }
+function drawUnit(ctx, key, x, y, scale, flip, shadowKey, shadowScale, team) {
+  const s = atlas.frame(shadowKey);
+  ctx.save(); ctx.globalAlpha = 0.9;
+  ctx.drawImage(atlas.canvas, s.x, s.y, s.w, s.h, x - s.ax * scale * shadowScale, y - s.ay * scale * shadowScale, s.w * scale * shadowScale, s.h * scale * shadowScale);
+  ctx.globalAlpha = 0.35; ctx.fillStyle = team === P ? '#3b82f6' : '#ef4444';
+  ctx.beginPath(); ctx.ellipse(x, y, s.w * scale * shadowScale / 2, s.h * scale * shadowScale / 2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  const f = atlas.frame(key);
+  ctx.save(); ctx.translate(x, y); if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(atlas.canvas, f.x, f.y, f.w, f.h, -f.ax * scale, -f.ay * scale, f.w * scale, f.h * scale);
+  ctx.restore();
+}
+const shadowFor = (look) => ({ key: (look.body === 'giant' || look.body === 'big' || look.body === 'vehicle') ? 'shadow_big' : 'shadow', scale: (look.body === 'mount' || look.body === 'mech' || look.body === 'quad') ? 1.5 : (look.body === 'bug' || look.body === 'small') ? 0.8 : 1 });
+
+// ---- header status + TOC ----
+const allUnits = Object.keys(UNITS);
+$('#status').innerHTML = `<b>UNITS</b><span>${allUnits.length} (${RACE_ORDER.length} races × 12)</span><b>FRAMES</b><span>${Object.keys(atlas.frames).length} in a ${atlas.size}² atlas</span><b>ATLAS USED</b><span>${Math.round(atlas.usedHeight / atlas.size * 100)}% of height</span><b>BODIES</b><span>${Object.keys(CELLS).length} body types</span>`;
+for (const s of document.querySelectorAll('section')) { const a = el('a', null, s.querySelector('h2').childNodes[0].textContent.trim()); a.href = '#' + s.id; $('#toc').appendChild(a); }
+$('#k-outline').textContent = K;
+
+// ---- 2 lane + themes ----
+$('#lane-kv').innerHTML = `<b>LANE</b><span>${LANE.halfLength * 2} world units long, units keep within ±${LANE.halfWidth} of the centre line; bases at ±${BASE_STATS.x}</span><b>WORLD SCALE</b><span>${PPU} px per world unit at ×1; the renderer picks the largest integer scale that keeps ≥660 virtual px of width</span><b>DEPTH</b><span>sprites sort by lane y (lower on screen = drawn later); no perspective scaling</span>`;
+for (const id in THEMES) {
+  const t = THEMES[id];
+  const row = el('div', 'race-head'); row.appendChild(el('h3', null, t.name.toUpperCase())); row.appendChild(el('span', 'tag', id));
+  $('#themes').appendChild(row);
+  const sw = el('div', 'swatches');
+  t.grass.forEach((c, i) => sw.appendChild(swatch(c, 'grass ' + (i + 1))));
+  t.dirt.forEach((c, i) => sw.appendChild(swatch(c, 'dirt ' + (i + 1))));
+  sw.appendChild(swatch(t.dirtEdge, 'dirt edge')); t.stone.forEach((c, i) => sw.appendChild(swatch(c, 'stone ' + (i + 1))));
+  t.flower.forEach((c, i) => sw.appendChild(swatch(c, 'flower ' + (i + 1)))); t.tree.forEach((c, i) => sw.appendChild(swatch(c, 'tree ' + (i + 1))));
+  if (t.water) sw.appendChild(swatch(t.water, 'water')); sw.appendChild(swatch(t.sky, 'sky'));
+  $('#themes').appendChild(sw);
+}
+
+// ---- 3 cells + anchors ----
+const example = {};
+for (const id of allUnits) { const b = UNITS[id].look.body; if (!example[b]) example[b] = id; }
+let rows = '<tr><th>BODY</th><th>CELL (px)</th><th>ANCHOR (cx, fy)</th><th>SCREEN HEIGHT ×1 / ×2 / ×3</th><th>EXAMPLE</th></tr>';
+for (const b in CELLS) { const c = CELLS[b]; rows += `<tr><td>${b}</td><td class="num">${c.w}×${c.h}</td><td class="num">${c.cx}, ${c.fy}</td><td class="num">${c.h} / ${c.h * 2} / ${c.h * 3}</td><td>${example[b] ? UNITS[example[b]].name : '—'}</td></tr>`; }
+$('#cells').innerHTML = rows;
+for (const b in CELLS) {
+  if (!example[b]) continue;
+  const c = CELLS[b], scale = 3;
+  const cv = document.createElement('canvas'); cv.width = c.w * scale; cv.height = c.h * scale;
+  const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#26254a'; ctx.fillRect(0, 0, cv.width, cv.height);
+  const f = atlas.frame(`${example[b]}_${P}_idle`);
+  ctx.drawImage(atlas.canvas, f.x, f.y, f.w, f.h, 0, 0, cv.width, cv.height);
+  ctx.fillStyle = 'rgba(255,210,63,.55)'; ctx.fillRect(0, c.fy * scale, cv.width, scale); ctx.fillRect(c.cx * scale, 0, scale, cv.height);
+  $('#anchors').appendChild(cell(cv, `${b} · ${UNITS[example[b]].name}`));
+}
+
+// ---- 4 sizes ----
+rows = '<tr><th>PRESET</th><th>TORSO W×H</th><th>HEAD W×H</th><th>LEG W×H</th><th>USED BY</th></tr>';
+for (const k in SIZES) { const s = SIZES[k]; const n = allUnits.filter((id) => UNITS[id].look.body === k).length; rows += `<tr><td>${k}</td><td class="num">${s[0]}×${s[1]}</td><td class="num">${s[2]}×${s[3]}</td><td class="num">${s[4]}×${s[5]}</td><td>${n} units</td></tr>`; }
+$('#sizes').innerHTML = rows;
+
+// ---- 5 silhouettes ----
+function silhouettes(race) {
+  const strip = el('div', 'strip');
+  for (const id of RACE_UNITS[race]) {
+    const f = atlas.frame(`${id}_${P}_idle`), scale = 3;
+    const c = document.createElement('canvas'); c.width = f.w * scale; c.height = f.h * scale;
+    const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(atlas.canvas, f.x, f.y, f.w, f.h, 0, 0, c.width, c.height);
+    ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = '#f0ecff'; ctx.fillRect(0, 0, c.width, c.height);
+    strip.appendChild(cell(c, UNITS[id].name));
+  }
+  return strip;
+}
+const silRace = el('div', 'swatches');
+for (const r of RACE_ORDER) { const b = el('button', 'btn small', RACES[r].name.toUpperCase()); b.onclick = () => { $('#sil').replaceWith(Object.assign(silhouettes(r), { id: 'sil' })); }; silRace.appendChild(b); }
+$('#silhouettes').appendChild(silRace); $('#silhouettes').appendChild(Object.assign(silhouettes('human'), { id: 'sil' }));
+
+// ---- 6 races ----
+const RACE_PAL = {};
+for (const r of RACE_ORDER) { const u = UNITS[RACE_UNITS[r][1]]; RACE_PAL[r] = u.look.pal; }
+for (const r of RACE_ORDER) {
+  const R = RACES[r], host = $('#races');
+  const head = el('div', 'race-head'); head.appendChild(frameCanvas('emblem_' + R.emblem, 3)); head.appendChild(el('h3', null, `${R.name.toUpperCase()} — ${R.title.toUpperCase()}`)); head.appendChild(el('span', 'tag', R.passive.name));
+  host.appendChild(head);
+  const cols = el('div', 'cols');
+  const idb = el('div', 'box'); idb.innerHTML = `<h4>IDENTITY</h4><p style="font-size:14px"><i>${R.tagline}</i> ${R.description}</p><p style="font-size:14px"><b>Feel:</b> ${R.identity}</p><p style="font-size:14px"><b>Strengths:</b> ${R.strengths.join(', ')} · <b>Weak:</b> ${R.weaknesses.join(', ')}</p>`;
+  const pal = el('div', 'box'); pal.innerHTML = '<h4>PALETTE</h4>';
+  const sw = el('div', 'swatches'); sw.appendChild(swatch(R.colors.primary, 'primary')); sw.appendChild(swatch(R.colors.secondary, 'secondary')); sw.appendChild(swatch(R.colors.accent, 'accent'));
+  const p2 = el('div', 'swatches'); for (const k in RACE_PAL[r]) { const v = RACE_PAL[r][k]; p2.appendChild(swatch(v === 'T' ? TEAM_COLORS[P].main : v, k + (v === 'T' ? ' (team)' : ''))); }
+  pal.appendChild(sw); pal.appendChild(el('p', 'muted', 'Sprite palette (basic melee unit):')); pal.appendChild(p2);
+  const base = el('div', 'box'); base.innerHTML = `<h4>BASE · ${R.base.toUpperCase()}</h4>`; const bs = el('div', 'strip'); bs.appendChild(cell(frameCanvas(`base_${R.base}_0`, 2), 'intact')); bs.appendChild(cell(frameCanvas(`base_${R.base}_3`, 2), 'ruined')); base.appendChild(bs);
+  cols.appendChild(idb); cols.appendChild(pal); cols.appendChild(base); host.appendChild(cols);
+  const strip = el('div', 'strip'); strip.style.marginTop = '10px';
+  for (const id of RACE_UNITS[r]) strip.appendChild(cell(frameCanvas(`${id}_${P}_idle`, 3), `${UNITS[id].tier}. ${UNITS[id].name}`));
+  host.appendChild(strip);
+}
+
+// ---- 7 tiers ----
+rows = '<tr><th>TIER</th><th>ROLE</th>' + RACE_ORDER.map((r) => `<th>${RACES[r].name.toUpperCase()}</th>`).join('') + '</tr>';
+for (let i = 0; i < 12; i++) rows += `<tr><td class="num">${i + 1}</td><td>${HUMAN_UNITS[i].role}</td>` + RACE_ORDER.map((r) => { const u = UNITS[RACE_UNITS[r][i]]; return `<td>${u.name} <span class="muted">· ${u.cost}g ×${u.squad}</span></td>`; }).join('') + '</tr>';
+$('#tiers').innerHTML = rows;
+
+// ---- 8 sheet ----
+function sheet(id) {
+  const box = el('div');
+  for (const team of [P, E]) {
+    const strip = el('div', 'strip'); strip.style.marginTop = '8px';
+    for (const f of buildUnitFrames(id, team)) strip.appendChild(cell(frameCanvas(f.key, 3), f.key.split('_').slice(2).join('_')));
+    box.appendChild(strip);
+  }
+  return box;
+}
+const sel = el('select', 'btn small'); sel.style.minHeight = '32px';
+for (const id of allUnits) sel.appendChild(new Option(`${RACES[UNITS[id].race].name} · ${UNITS[id].name}`, id));
+sel.value = 'h_knight'; sel.onchange = () => { $('#sheetbox').replaceWith(Object.assign(sheet(sel.value), { id: 'sheetbox' })); };
+$('#sheet').appendChild(sel); $('#sheet').appendChild(Object.assign(sheet('h_knight'), { id: 'sheetbox' }));
+
+// ---- 9 attacks ----
+const byAttack = {}; for (const w in ATTACK_BY_WEAPON) (byAttack[ATTACK_BY_WEAPON[w]] ||= []).push(w);
+rows = '<tr><th>SET</th><th>WEAPONS / BODIES</th><th>FRAME 1 · ANTICIPATION</th><th>FRAME 2 · IMPACT</th><th>FRAME 3 · RECOVERY</th></tr>';
+const desc = (p) => Object.entries(p).filter(([k]) => k !== 'frame').map(([k, v]) => `${k} ${v === true ? '' : v}`).join(' · ');
+for (const k in ATTACK) { const ws = byAttack[k] || []; const extra = k === 'bite' ? 'quad, bug, mech bodies' : k === 'fire' ? 'flyer, vehicle bodies' : ''; rows += `<tr><td class="num">${k}</td><td>${[...ws, extra].filter(Boolean).join(', ')}</td>${ATTACK[k].map((p) => `<td class="muted">${desc(p)}</td>`).join('')}</tr>`; }
+$('#attacks').innerHTML = rows;
+
+// ---- 10 shadows ----
+for (const [key, label] of [['shadow', 'shadow 9×4'], ['shadow_big', 'shadow_big 17×7']]) $('#shadows').appendChild(cell(frameCanvas(key, 6), label, 'grass'));
+for (const id of ['m_scarab', 'h_swordsman', 'h_knight', 'h_guard', 'm_golem']) {
+  const look = UNITS[id].look, sh = shadowFor(look), c = CELLS[look.body], scale = 3;
+  const cv = document.createElement('canvas'); cv.width = (c.w + 20) * scale; cv.height = (c.h + 8) * scale;
+  const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.fillStyle = '#5fae4a'; ctx.fillRect(0, 0, cv.width, cv.height);
+  drawUnit(ctx, `${id}_${P}_idle`, cv.width / 2, c.fy * scale + 3 * scale, scale, false, sh.key, sh.scale, P);
+  $('#shadows').appendChild(cell(cv, `${UNITS[id].name} · ${sh.key} ×${sh.scale}`));
+}
+
+// ---- 11 fx ----
+const fxKeys = Object.keys(atlas.frames).filter((k) => !/^[hdrm]_/.test(k) && !k.startsWith('base_'));
+for (const k of fxKeys) $('#fx').appendChild(cell(frameCanvas(k, 3), k, /shadow|hit|spark|star|px|dust|smoke|poof/.test(k) ? 'dark' : ''));
+rows = '<tr><th>KIND</th><th>SPRITE</th><th>SPEED</th><th>ARC</th><th>TRAIL</th><th>IMPACT</th></tr>';
+for (const k in PROJECTILES) { const p = PROJECTILES[k]; rows += `<tr><td class="num">${k}</td><td>${p.instant ? 'instant line' : p.sprite + (p.anim ? ` (${p.anim} frames)` : '')}</td><td class="num">${p.speed ?? '—'}</td><td class="num">${p.arc ?? '—'}</td><td>${p.trail || '—'}</td><td>${p.explode || (p.instant ? 'beam flash' : 'small hit')}</td></tr>`; }
+$('#projectiles').innerHTML = rows;
+
+// ---- 12 cards ----
+const coin = atlas.frame('coin'); const cc = $('#ico-coin'); cc.width = coin.w * 2; cc.height = coin.h * 2; atlas.drawTo(cc.getContext('2d'), 'coin', 0, 0, 2);
+function card(id, state) {
+  const def = UNITS[id];
+  const c = el('button', 'ucard tier' + def.tier + (state ? ' ' + state : ''));
+  c.appendChild(el('span', 'key', def.hotkey)); c.appendChild(el('span', 'squad', 'x' + def.squad));
+  const f = atlas.frame(`${id}_${P}_idle`); const scale = Math.max(1, Math.floor(44 / Math.max(f.w, f.h)));
+  const icon = unitIcon(atlas, id, P, scale); icon.className = 'icon'; c.appendChild(icon);
+  c.appendChild(el('span', 'name', def.name));
+  const cost = el('span', 'cost'); const ic = document.createElement('canvas'); ic.width = coin.w * 2; ic.height = coin.h * 2; atlas.drawTo(ic.getContext('2d'), 'coin', 0, 0, 2); ic.className = 'ico'; cost.appendChild(ic); cost.appendChild(el('span', null, String(def.cost))); c.appendChild(cost);
+  const cd = el('div', 'cd'); c.appendChild(cd); const cdt = el('div', 'cdt', ''); c.appendChild(cdt);
+  if (state === 'cooldown') { cd.style.height = '55%'; cdt.textContent = '3'; c.classList.add('poor'); }
+  if (state === 'locked') c.appendChild(el('div', 'lockico', '&#128274;'));
+  if (def.tier >= 11) c.appendChild(el('span', 'tierstar', def.tier === 12 ? '&#9733;&#9733;' : '&#9733;'));
+  return c;
+}
+for (const [id, st] of [['h_squire', 'affordable'], ['h_swordsman', 'affordable'], ['h_spearman', 'affordable recommended'], ['h_archer', 'affordable'], ['h_crossbow', 'cooldown'], ['h_knight', 'poor'], ['h_paladin', 'poor'], ['h_guard', 'poor'], ['h_priest', 'poor'], ['h_firemage', 'poor'], ['h_royalknight', 'locked'], ['h_king', 'locked']]) $('#cards').appendChild(card(id, st));
+
+// ---- 13 tokens ----
+fetch('../css/style.css').then((r) => r.text()).then((css) => {
+  const root = css.match(/:root\s*\{([^}]*)\}/)[1];
+  for (const [, name, val] of root.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})/g)) $('#tokens').appendChild(swatch(val, '--' + name));
+});
+
+// ---- 14 icons ----
+for (const r of RACE_ORDER) for (const id of RACE_UNITS[r]) { const f = atlas.frame(`${id}_${P}_idle`); const scale = Math.max(1, Math.floor(44 / Math.max(f.w, f.h))); $('#icons').appendChild(cell(unitIcon(atlas, id, P, scale), `${UNITS[id].name} ×${scale}`)); }
+
+// ---- 15 bases ----
+for (const r of RACE_ORDER) { const strip = el('div', 'strip'); strip.style.marginTop = '8px'; for (let lvl = 0; lvl < 4; lvl++) strip.appendChild(cell(frameCanvas(`base_${RACES[r].base}_${lvl}`, 2), `${RACES[r].base} · state ${lvl}`)); $('#bases').appendChild(strip); }
+
+// ---- 16 colours ----
+for (const t of [P, E]) { const c = TEAM_COLORS[t]; $('#team-sw').appendChild(swatch(c.main, c.name + ' T')); $('#team-sw').appendChild(swatch(c.dark, c.name + ' t')); $('#team-sw').appendChild(swatch(c.light, c.name + ' L')); }
+for (const r of RACE_ORDER) { $('#race-sw').appendChild(swatch(RACES[r].colors.primary, RACES[r].name)); $('#race-sw').appendChild(swatch(RACES[r].colors.accent, 'accent')); }
+for (const [v, n] of [[K, 'outline K'], [METAL, 'metal'], [METAL_D, 'metal dark'], [METAL_DD, 'metal dd'], [WOOD, 'wood'], [WOOD_D, 'wood dark'], [GOLD, 'gold'], [GOLD_D, 'gold dark'], [BONE, 'bone'], [BONE_D, 'bone dark']]) $('#mat-sw').appendChild(swatch(v, n));
+
+// ---- 17 readability ----
+function crowdCanvas(w, h, n, scale, focus) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  const t = THEMES.meadow;
+  for (let y = 0; y < h; y += 4 * scale) for (let x = 0; x < w; x += 4 * scale) { ctx.fillStyle = t.grass[(x * 7 + y * 13) % 4]; ctx.fillRect(x, y, 4 * scale, 4 * scale); }
+  ctx.fillStyle = t.dirt[0]; ctx.fillRect(0, h * 0.22, w, h * 0.56);
+  const list = [];
+  for (let i = 0; i < n; i++) { const id = focus && i === 0 ? focus : allUnits[Math.floor(Math.random() * allUnits.length)]; const team = i % 2; const x = team === P ? w * (0.06 + Math.random() * 0.56) : w * (0.38 + Math.random() * 0.56); list.push({ id, team, x, y: h * 0.28 + Math.random() * h * 0.5 }); }
+  list.sort((a, b) => a.y - b.y);
+  for (const u of list) { const look = UNITS[u.id].look, sh = shadowFor(look); const anim = Math.random() < 0.5 ? 'walk' + Math.floor(Math.random() * 4) : 'atk' + Math.floor(Math.random() * 3); drawUnit(ctx, `${u.id}_${u.team}_${anim}`, u.x, u.y, scale, u.team === E, sh.key, sh.scale, u.team); }
+  if (focus) { const u = list.find((x) => x.id === focus); ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 2; ctx.strokeRect(u.x - 22 * scale, u.y - 40 * scale, 44 * scale, 46 * scale); }
+  return cv;
+}
+function readability(id) {
+  const host = $('#readability'); host.innerHTML = '';
+  for (const s of [3, 2, 1]) host.appendChild(cell(frameCanvas(`${id}_${P}_idle`, s), `×${s} · ${CELLS[UNITS[id].look.body].h * s}px tall`, 'grass'));
+  host.appendChild(cell(crowdCanvas(420, 160, 25, 2, id), 'in a 25-unit scrum (×2)'));
+}
+for (const pick of ['#pick', '#pick2']) for (const id of allUnits) $(pick).appendChild(new Option(`${RACES[UNITS[id].race].name} · ${UNITS[id].name}`, id));
+$('#pick').value = 'm_bandage'; $('#pick').onchange = () => readability($('#pick').value); readability('m_bandage');
+
+// ---- 18 crowds ----
+for (const [n, label] of [[10, 'SCENE A · 10 UNITS'], [25, 'SCENE B · 25 UNITS'], [50, 'SCENE C · 50 UNITS'], [90, 'SCENE D · 90 UNITS']]) {
+  const box = el('div', 'crowd'); const make = () => { box.innerHTML = ''; const c = crowdCanvas(560, 220, n, 2); c.style.width = '100%'; box.appendChild(c); box.appendChild(el('div', 'lbl', label)); };
+  box.onclick = make; make(); $('#crowds').appendChild(box);
+}
+
+// ---- 19 tech ----
+$('#tech').innerHTML = `<b>PLATFORM</b><span>Desktop and mobile browser, WebGL via Three.js (vendored), no build step</span><b>RENDERING</b><span>Orthographic camera, low-res canvas at integer scale, CSS pixelated upscale</span><b>SPRITES</b><span>One ${atlas.size}² canvas atlas (${Object.keys(atlas.frames).length} frames, nearest filter, no mipmaps), one instanced batch of up to 10 000 quads</span><b>ANIMATION</b><span>Per-unit state (march / fight / cheer / flee / dead / downed) picks a frame key; no skeletal animation at runtime</span><b>UNIT CAP</b><span>${ECONOMY.maxUnitsPerTeam} per team; sim runs at 60 Hz fixed step, spatial grid for targeting</span><b>EFFECTS</b><span>Pooled particles and floating numbers drawn into the same batch; camera shake only for big hits</span><b>UI</b><span>HTML/CSS overlay (no canvas text), two web fonts, integer-scaled icon canvases</span>`;
+
+// ---- 23 prompt ----
+function prompt(id) {
+  const u = UNITS[id], R = RACES[u.race];
+  return `Create an ORIGINAL 2D character concept for a classic browser real-time lane strategy game.
+
+Character: ${u.name}
+Faction: ${R.name} — ${R.title} (${R.tagline})
+Class: ${u.role} (tier ${u.tier} of 12)
+Combat role: ${u.counterTags.join(', ')}${u.strongAgainst.length ? ' · strong vs ' + u.strongAgainst.join(', ') : ''}
+Visual concept: ${u.description}
+Body preset: ${u.look.body}${u.look.scale ? ' ×' + u.look.scale : ''} · headgear: ${u.look.hat || 'none'} · weapon: ${u.look.weapon || 'none'}
+Palette: ${R.colors.primary} / ${R.colors.secondary} / ${R.colors.accent}, team colour on cloth and banners
+
+Design requirements:
+- compact stylised proportions, slightly oversized head
+- strong readable silhouette, weapon clearly visible
+- colourful cartoon ${u.race === 'robot' ? 'sci-fi' : 'fantasy'} design, one-pixel dark outline, two-step shading
+- readable at 30 px tall; full body, feet visible, facing right
+- centred on a plain or transparent background
+- built for a 1-idle / 4-walk / 3-attack / 1-hurt frame set
+- no text, no logo, no UI, no environment
+
+The character must belong to the ${R.name} faction next to its 11 siblings and must not copy any existing game's character, costume, weapon, sprite or artwork.`;
+}
+$('#pick2').value = 'm_bandage'; $('#prompt').textContent = prompt('m_bandage');
+$('#pick2').onchange = () => { $('#prompt').textContent = prompt($('#pick2').value); };
+$('#copy').onclick = () => navigator.clipboard.writeText($('#prompt').textContent);
+</script>
+</body>
+</html>

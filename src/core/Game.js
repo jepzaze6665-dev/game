@@ -23,10 +23,12 @@ export class Game {
     this.audio = new Audio(this.settings);
     this.hud = new HUD(uiRoot, this.renderer.atlas, {
       deploy: (id) => this.deploy(id),
+      lookAt: (x) => this.renderer.lookAt(x),
       pause: () => this.pause(),
       toggleSpeed: () => this.toggleSpeed(),
       toggleSound: () => this.toggleSound(),
     });
+    this.hud.cam = () => ({ x: this.renderer.camX, halfW: this.renderer.worldWidth / 2 });
     this.menus = new Menus(uiRoot, this.renderer.atlas, this.prog, {
       click: () => this.audio.play('click'),
       startCampaign: (stage) => this.pickRaceThen({ stage }),
@@ -248,7 +250,7 @@ export class Game {
       }
     }
     this.state = 'results';
-    if (b.result.reason === 'time') hintText = draw ? 'Time limit reached. Equal base health: a draw. Try more siege pressure.' : 'Time limit reached. The healthier base wins.';
+    if (b.result.reason === 'time') hintText = draw ? 'Time limit reached. Equal base health and equal armies: a draw. Try more siege pressure.' : b.result.tiebreak ? 'Time limit reached with equal base health. The stronger surviving army wins.' : 'Time limit reached. The healthier base wins.';
     this.hud.hide();
     this.menus.results({ won, draw, stars, time: b.result.time, kills: st.kills, lost: st.lost, spent: st.spent, deployed: st.deployed, favourite: mvpId ? UNITS[mvpId].name : null, mvpId, mvpN, next, hintText, race: b.races[0], enemyRace: b.races[1] });
   }
@@ -263,6 +265,7 @@ export class Game {
         case 'overtime': this.hud.showBanner('OVERTIME', 'warn', `${ev.mult}x income · siege damage rising`, 2200); break;
         case 'siege': this.hud.showBanner('GATES ARE CRUMBLING', 'warn', 'Both bases lose health. Land the finishing blow!', 3000); break;
         case 'spawn': this.audio.play('spawn'); break;
+        case 'wave': if (ev.team === TEAM.PLAYER && ev.count) this.hud.showBanner('WAVE ' + ev.wave, 'gold', ev.count + ' units march', 900); break;
         case 'melee': this.audio.play(ev.base ? 'hit' : 'sword', { volume: ev.base ? 0.8 : 0.6 }); break;
         case 'hit': if (ev.counter) this.audio.play('counter', { volume: 0.5 }); if (ev.charge) this.audio.play('charge'); this.audio.play('hit', { volume: 0.5 }); break;
         case 'death': this.audio.play(ev.big ? 'bigDeath' : 'death', { volume: 0.6 }); break;
@@ -326,7 +329,7 @@ export class Game {
             this.endBanner = true;
             const won = this.battle.result.winner === TEAM.PLAYER;
             const timed = this.battle.result.reason === 'time';
-            this.hud.showBanner(timed ? 'TIME LIMIT' : won ? 'ENEMY BASE DESTROYED!' : 'YOUR BASE HAS FALLEN!', won ? 'gold big' : 'warn big', timed ? 'Healthier base wins · Equal health is a draw' : '', 3000);
+            this.hud.showBanner(timed ? 'TIME LIMIT' : won ? 'ENEMY BASE DESTROYED!' : 'YOUR BASE HAS FALLEN!', won ? 'gold big' : 'warn big', timed ? (this.battle.result.tiebreak ? 'Equal base health · Stronger army wins' : 'Healthier base wins') : '', 3000);
             setTimeout(() => this.audio.play(won ? 'victory' : 'defeat'), 900);
           }
           if (this.ending > 3.2) { this.endBanner = false; this.finishBattle(); }

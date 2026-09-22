@@ -75,7 +75,7 @@ try {
   assert.equal(await mobile.evaluate(() => GAME.battle.stats[0].spent), before);
   assert.ok(await mobile.locator('#tooltip.show').count());
   // Stage the boundary; the normal frame loop must render the draw results.
-  await mobile.evaluate(() => { GAME.battle.units = []; GAME.battle.projectiles = []; GAME.battle.spawnQueue = []; GAME.battle.bases.forEach(b => b.hp = 100); GAME.battle.time = 479.99; });
+  await mobile.evaluate(() => { GAME.battle.units = []; GAME.battle.projectiles = []; GAME.battle.spawnQueue = []; GAME.battle.bases.forEach(b => b.hp = 100); GAME.battle.time = (GAME.battle.timeLimit || 1200) - 0.01; });
   await mobile.getByText('DRAW', { exact: true }).waitFor({ timeout: 15000 });
   await mobile.screenshot({ path: 'progress/screenshots/draw.png' });
   assert.deepEqual(errors, []);

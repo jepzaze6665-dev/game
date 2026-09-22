@@ -1,8 +1,8 @@
 {
-  "updated": "2026-09-18 17:35",
-  "phase": "Phase 4 — Browser-verified race build; balance and combat polish",
-  "round": 5,
-  "polish": "All four race flows work in the real browser. Mobile HUD, long-press inspection, health bars and the eight-minute endgame were hardened in this pass.",
+  "updated": "2026-09-19 14:10",
+  "phase": "Phase 5 — Matchup balance pass; combat rules hardened",
+  "round": 6,
+  "polish": "Every race matchup now sits between 31% and 69% over 36 seeded games per pair (was 0-8% for Mummy vs Human and Robot vs Mummy). Counter rules are honest to the codex, and timed games no longer end in draws.",
   "completed": [
     "Race system: Human / Demon / Robot / Mummy with passives (Formation, Rage, Armor Core, Undeath)",
     "48 data-driven units (12 per race) with tags, counters, armour, abilities",
@@ -15,33 +15,81 @@
     "Centralised balance: tier value curve + race power knobs (src/data/balance.js), duel lab, race matrix harness",
     "Browser QA: all 48 unit cards deployed through real input; pause, resume and restart verified for every race",
     "Mobile landscape HUD verified at 844x390 with all 12 cards and controls inside the viewport",
-    "Eight-minute time limit, draw handling and late siege rules; seven automated gameplay/data regressions"
+    "Eight-minute time limit, draw handling and late siege rules; seven automated gameplay/data regressions",
+    "Counter system: weakAgainst is a real +30% modifier, race-wide tags (UNDEAD, MECHANICAL) capped at +20%, ARMORED reserved for heavy plate",
+    "Smooth armour curve (big hits punch through, small hits blunted, 45% floor) and fractional damage so swarm units are not rounded to nothing",
+    "Value normaliser counts formation, rage, summons and revive realistically; per-unit TUNE override layer (src/data/tuning.js)",
+    "AI regroups into counter-waves instead of trickle-feeding squads into a winning army; time-limit tiebreak by surviving army value",
+    "Graphic Bible (docs/graphic-bible.html): 24-section art/animation/UI standard rendered live from the rig, atlas, themes and CSS kit"
   ],
-  "improving": ["Mummy matchup consistency", "Mirror-match side bias diagnostics", "Dense-battle effect readability"],
-  "issues": ["Seeded AI matrix remains volatile with small samples", "Human-vs-Mummy and Demon-vs-Mummy matchups still swing strongly", "Mirror diagnostics show side bias for some races; player battles remain asymmetric by design"],
-  "critic": "Round 5 browser pass: all race selection, roster, deployment and restart paths passed. Mobile controls previously overflowed the right edge and now fit. Health-bar rectangle arguments were reversed and are fixed. Long press now inspects without deploying.",
+  "improving": [
+    "Robot vs Mummy still leans Mummy (31%)",
+    "Long even games often go to the 8-minute tiebreak",
+    "Dense-battle effect readability"
+  ],
+  "issues": [
+    "Robot melee line (Combat/Spider/Flame/Tesla) underperforms its ranged line in every matchup",
+    "Duel lab (equal-gold 1v1) disagrees with full-game results, so it is a hint, not an oracle",
+    "Seeded matrix still swings ±4 games per pair at n=24"
+  ],
+  "critic": "Round 6 balance pass: Human vs Mummy was 11:1 because Human armour, formation and priest healing made Mummy chaff harmless, and the AI fed single squads into the winning army. Robot vs Mummy hit 0:24 mid-pass when the ARMORED tag was cleaned up; fixed with Pharaoh raise nerf, Plague Priest tune and Robot melee tunes. Verified in the real browser: battle runs, results screen shows the new tiebreak text.",
   "balance": {
-    "human": "47% in the latest 72-game seeded matrix; Formation is healthy",
-    "demon": "56% in the latest matrix; Rage pressure is inside the target band",
-    "robot": "61% in the latest matrix; armour and range remain slightly strong",
-    "mummy": "36% in the latest matrix; Undeath still needs matchup-specific help"
+    "human": "51% over 108 games; strongest vs Mummy (61%)",
+    "demon": "44% over 106 games; even vs Human and Mummy",
+    "robot": "50% over 107 games; strong vs Human/Demon, weak vs Mummy",
+    "mummy": "53% over 108 games; beats Robot 69%, loses to Human 39%"
   },
   "playtest": [
-    "All 12 units deployed through real browser input for each of the four races",
-    "Pause, resume and restart preserve the selected race",
-    "Mobile 844x390: all deployment cards, base bars and controls fit the viewport",
-    "72-game seeded matrix: Human 47%, Demon 56%, Robot 61%, Mummy 36%; average 5.0 minutes; no game exceeded the 8-minute limit",
-    "Largest remaining gameplay problem: Mummy matchup consistency, especially versus Human"
+    "36-game pairs: Human-Demon 20:16, Human-Robot 13:23, Human-Mummy 22:14, Demon-Robot 14:20, Demon-Mummy 17:19, Robot-Mummy 11:24",
+    "Average game 6.3 min; no game exceeded the 8-minute limit; no draws",
+    "Browser: Mummy vs Robot battle at 2x speed, results screen with tiebreak hint, no console errors"
   ],
-  "units": { "human": 12, "demon": 12, "robot": 12, "mummy": 12 },
+  "units": {
+    "human": 12,
+    "demon": 12,
+    "robot": 12,
+    "mummy": 12
+  },
   "log": [
-    { "time": "12:00", "text": "Project scaffolded: data, art rig, sim, renderer, HUD, menus, audio written." },
-    { "time": "12:40", "text": "First render in browser. Fixed vendored three.core.js, flipped-sprite culling, watchdog loop." },
-    { "time": "13:10", "text": "Balance pass: base HP, siege damage scaling, comeback income, base towers, AI saving fixed." },
-    { "time": "13:40", "text": "Endgame cheer/flee, HUD scaling with viewport, codex/campaign layout fixes." },
-    { "time": "14:20", "text": "Critic round 3: combat blob, title overlap, speed multiplier, generic defeat text. Fixes applied." },
-    { "time": "15:30", "text": "Four races: data (48 units), combat/counter/armour/abilities, rig for 10 body types, 4 bases, race UI." },
-    { "time": "16:10", "text": "Balance harnesses (duel lab, matrix). Value normaliser + race power knobs. Overtime income." },
-    { "time": "17:35", "text": "Round 5: real-browser QA for four races, mobile HUD fix, long-press fix, health-bar fix, timed endgame, seeded diagnostics and regression suite." }
+    {
+      "time": "12:00",
+      "text": "Project scaffolded: data, art rig, sim, renderer, HUD, menus, audio written."
+    },
+    {
+      "time": "12:40",
+      "text": "First render in browser. Fixed vendored three.core.js, flipped-sprite culling, watchdog loop."
+    },
+    {
+      "time": "13:10",
+      "text": "Balance pass: base HP, siege damage scaling, comeback income, base towers, AI saving fixed."
+    },
+    {
+      "time": "13:40",
+      "text": "Endgame cheer/flee, HUD scaling with viewport, codex/campaign layout fixes."
+    },
+    {
+      "time": "14:20",
+      "text": "Critic round 3: combat blob, title overlap, speed multiplier, generic defeat text. Fixes applied."
+    },
+    {
+      "time": "15:30",
+      "text": "Four races: data (48 units), combat/counter/armour/abilities, rig for 10 body types, 4 bases, race UI."
+    },
+    {
+      "time": "16:10",
+      "text": "Balance harnesses (duel lab, matrix). Value normaliser + race power knobs. Overtime income."
+    },
+    {
+      "time": "17:35",
+      "text": "Round 5: real-browser QA for four races, mobile HUD fix, long-press fix, health-bar fix, timed endgame, seeded diagnostics and regression suite."
+    },
+    {
+      "time": "12:30",
+      "text": "Round 6: matchup balance (counter rules, armour curve, normaliser, AI regroup, Pharaoh/Plague/Robot tunes), time-limit tiebreak, tools/pair.mjs."
+    },
+    {
+      "time": "14:10",
+      "text": "Graphic Bible page added: live palettes, cells/anchors, silhouettes, sprite sheets, FX, HUD kit, icons, bases, readability and crowd tests, concept-prompt generator."
+    }
   ]
 }

@@ -71,10 +71,10 @@ export const MUMMY_UNITS = [
     passive: 'undeath', ability: { name: 'Soul Drain', desc: 'Heals 30% of damage dealt and regenerates 5 HP per second.' },
     look: { body: 'big', scale: 0.8, pal: { ...MP, skin: '#2a1f14', armor: '#ffd43a', trim: 'T' }, hat: 'jackal', weapon: 'wasscepter', cape: '#1f3a6f' } }),
   unit({ id: 'm_pharaoh', race: 'mummy', name: 'Pharaoh', role: 'Legendary',
-    description: 'The undying king. Every 8 seconds he raises three Mummies and mends every undead near him.',
+    description: 'The undying king. Every 10 seconds he raises two Mummies and mends every undead near him.',
     cost: 500, squad: 1, hp: 1000, armor: 7, damage: 55, attackSpeed: 0.7, attackRange: 1.4, movementSpeed: 1.8, damageType: 'magic', splash: 1.1, regen: 6,
-    raise: { unit: 'm_mummy', count: 3, every: 8, heal: 0.15, radius: 4 },
+    raise: { unit: 'm_mummy', count: 2, every: 10, heal: 0.15, radius: 4 },
     counterTags: ['HEAVY', 'MELEE', 'MAGIC', 'UNDEAD', 'ELITE'], strongAgainst: ['MELEE', 'HEAVY'], weakAgainst: ['RANGED', 'LIGHT'],
-    passive: 'undeath', ability: { name: 'Eternal Court', desc: 'Every 8 s: raises 3 Mummies and heals undead allies within 4 tiles by 15%.' },
+    passive: 'undeath', ability: { name: 'Eternal Court', desc: 'Every 10 s: raises 2 Mummies and heals undead allies within 4 tiles by 15%.' },
     look: { body: 'big', scale: 0.9, pal: { ...MP, skin: '#c9a66b', armor: '#ffd43a', cloth: '#1f3a6f', trim: 'T' }, hat: 'nemesgold', weapon: 'crook', cape: '#1f3a6f', armorPlate: true, robe: '#1f3a6f', robeTrim: '#ffd43a' } }),
 ];

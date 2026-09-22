@@ -50,6 +50,8 @@ const DIGITS = {
   Z: ['111', '001', '010', '100', '111'],
 };
 
+export const SHADOW_SIZES = [[12, 5], [16, 6], [24, 9], [32, 12], [48, 18]];   // half-axes in atlas px (PPU 12)
+
 export function buildFxFrames() {
   const out = [];
   const push = (key, pb, ax, ay) => out.push({ key, pb, ax: ax ?? pb.w / 2, ay: ay ?? pb.h / 2 });
@@ -57,6 +59,9 @@ export function buildFxFrames() {
   push('px', mk(1, 1, (p) => p.set(0, 0, W)));
   push('shadow', mk(9, 4, (p) => { p.ellipse(4, 1, 4, 1, 'rgba(10,6,20,0.45)'); p.hline(2, 6, 3, 'rgba(10,6,20,0.25)'); }), 4.5, 2);
   push('shadow_big', mk(17, 7, (p) => p.ellipse(8, 3, 8, 3, 'rgba(10,6,20,0.45)')), 8.5, 3.5);
+  // larger ellipses for the animation-sheet units, so a wide sprite gets a
+  // shadow drawn at its own pixel size instead of a 17 px one blown up 3x
+  for (const [rx, ry] of SHADOW_SIZES) push(`shadow_${rx}`, mk(rx * 2 + 1, ry * 2 + 1, (p) => p.ellipse(rx, ry, rx, ry, 'rgba(10,6,20,0.45)')), rx + 0.5, ry + 0.5);
 
   // digits
   for (const ch of Object.keys(DIGITS)) {

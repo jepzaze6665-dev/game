@@ -17,6 +17,9 @@ export class Battle {
     this.projectiles = [];
     this.events = [];
     this.spawnQueue = [];
+    this.waveQueue = [[], []];    // squads bought this wave, per team; they muster together when waveT hits zero
+    this.waveT = ECONOMY.waveEvery;
+    this.waveNo = 0;
     this.grid = new SpatialGrid(-LANE.halfLength - 2, LANE.halfLength + 2, -LANE.halfWidth - 3, LANE.halfWidth + 3, 2);
     this.gold = [ECONOMY.startGold, ECONOMY.startGold];
     this.regen = [ECONOMY.regenPerSec, ECONOMY.regenPerSec];
@@ -46,7 +49,7 @@ export class Battle {
   canAfford(team, id) { return this.gold[team] >= UNITS[id].cost; }
   cooldownLeft(team, id) { return Math.max(0, (this.cooldowns[team][id] || 0)); }
   armyFull(team) { return this.counts[team] + this.pendingCount(team) >= ECONOMY.maxUnitsPerTeam; }
-  pendingCount(team) { let n = 0; for (const s of this.spawnQueue) if (s.team === team) n++; return n; }
+  pendingCount(team) { let n = 0; for (const s of this.spawnQueue) if (s.team === team) n++; for (const id of this.waveQueue[team]) n += UNITS[id].squad; return n; }
 
   // Returns a reason string when the squad cannot be bought, or null on success.
   spawnSquad(team, id) {
@@ -60,14 +63,34 @@ export class Battle {
     this.cooldowns[team][id] = def.cooldown;
     const st = this.stats[team];
     st.spent += def.cost; st.deployed += def.squad; st.squads[id] = (st.squads[id] || 0) + 1;
-    const spread = LANE.halfWidth * 0.85;
-    const centerY = (Math.random() - 0.5) * spread * 1.2;
-    for (let i = 0; i < def.squad; i++) {
-      const laneY = Math.max(-spread, Math.min(spread, centerY + (i - (def.squad - 1) / 2) * (def.radius * 2.4) + (Math.random() - 0.5) * 0.5));
-      this.spawnQueue.push({ team, id, delay: i * 0.11, laneY });
-    }
+    this.waveQueue[team].push(id);
     this.events.push({ type: 'deploy', team, id, count: def.squad, tier: def.tier });
     return null;
+  }
+
+  // Wave muster: everything bought since the last wave spawns as one block in
+  // front of the gate (six ranks deep, columns toward the centre) and marches.
+  musterWave() {
+    this.waveNo++;
+    for (const team of [0, 1]) {
+      const ids = this.waveQueue[team]; if (!ids.length) continue;
+      const dir = team === TEAM.PLAYER ? 1 : -1;
+      const rows = 6, spread = LANE.halfWidth * 0.85;
+      let k = 0;
+      // heavier squads lead; ranged squads fall in behind
+      const order = ids.slice().sort((a, b) => (UNITS[a].projectile ? 1 : 0) - (UNITS[b].projectile ? 1 : 0) || UNITS[b].cost - UNITS[a].cost);
+      for (const id of order) {
+        const def = UNITS[id];
+        for (let i = 0; i < def.squad; i++, k++) {
+          const col = Math.floor(k / rows), row = k % rows;
+          const laneY = -spread + (row + 0.5) * (2 * spread / rows) + (Math.random() - 0.5) * 0.4;
+          const x = -dir * BASE_STATS.spawnX + dir * col * 0.9;
+          this.spawnQueue.push({ team, id, delay: col * 0.06 + row * 0.02, laneY, x });
+        }
+      }
+      this.events.push({ type: 'wave', team, count: k, wave: this.waveNo });
+      this.waveQueue[team] = [];
+    }
   }
 
   makeUnit(team, id, x, y) {
@@ -83,9 +106,9 @@ export class Battle {
     };
   }
 
-  spawnUnit(team, id, laneY) {
+  spawnUnit(team, id, laneY, atX) {
     const dir = team === TEAM.PLAYER ? 1 : -1;
-    const x = -dir * BASE_STATS.spawnX + (Math.random() - 0.5) * 0.6;
+    const x = (atX != null ? atX : -dir * BASE_STATS.spawnX) + (Math.random() - 0.5) * 0.3;
     const u = this.makeUnit(team, id, x, laneY);
     this.units.push(u);
     this.counts[team]++;
@@ -123,8 +146,15 @@ export class Battle {
   tick(dt) {
     this.time += dt;
     if (!this.result && this.time >= ECONOMY.timeLimit) {
+      // Healthier base wins; with equal gates the stronger surviving army takes it.
       const lead = this.bases[0].hp / this.bases[0].maxHp - this.bases[1].hp / this.bases[1].maxHp;
-      this.result = { winner: Math.abs(lead) < 0.00001 ? null : lead > 0 ? 0 : 1, time: ECONOMY.timeLimit, reason: 'time' };
+      let winner = Math.abs(lead) < 0.00001 ? null : lead > 0 ? 0 : 1, tiebreak = false;
+      if (winner === null) {
+        const army = [0, 0];
+        for (const u of this.units) if (u.state !== 'dead') army[u.team] += UNITS[u.type.id].cost / UNITS[u.type.id].squad * u.hp / u.maxHp;
+        if (Math.abs(army[0] - army[1]) > 1) { winner = army[0] > army[1] ? 0 : 1; tiebreak = true; }
+      }
+      this.result = { winner, time: ECONOMY.timeLimit, reason: 'time', tiebreak };
       this.spawnQueue.length = 0;
     }
     // Late siege weakens both gates equally, but a unit must land the final hit.
@@ -137,17 +167,18 @@ export class Battle {
     let ot = 1;
     for (const o of ECONOMY.overtime) if (this.time >= o.at) ot = o.mult;
     if (ot !== this.overtime) { this.overtime = ot; if (ot > 1) this.events.push({ type: 'overtime', mult: ot }); }
-    const cb0 = 1 + ECONOMY.comebackBonus * Math.max(0, Math.min(1, -this.frontline / 20));
-    const cb1 = 1 + ECONOMY.comebackBonus * Math.max(0, Math.min(1, this.frontline / 20));
+    const cb0 = 1 + ECONOMY.comebackBonus * Math.max(0, Math.min(1, -this.frontline / (BASE_STATS.x - 2)));
+    const cb1 = 1 + ECONOMY.comebackBonus * Math.max(0, Math.min(1, this.frontline / (BASE_STATS.x - 2)));
     this.regen[0] = (ECONOMY.regenPerSec + growth) * this.playerIncomeScale * cb0 * ot;
     this.regen[1] = (ECONOMY.regenPerSec + growth) * this.enemyIncomeScale * cb1 * ot;
     if (!this.result) { this.addGold(0, this.regen[0] * dt); this.addGold(1, this.regen[1] * dt); }
     for (const team of [0, 1]) for (const k in this.cooldowns[team]) this.cooldowns[team][k] = Math.max(0, this.cooldowns[team][k] - dt);
-    // spawn queue
+    // wave clock, then the spawn queue it feeds
+    if (!this.result) { this.waveT -= dt; if (this.waveT <= 0) { this.waveT += ECONOMY.waveEvery; this.musterWave(); } }
     for (let i = this.spawnQueue.length - 1; i >= 0; i--) {
       const s = this.spawnQueue[i];
       s.delay -= dt;
-      if (s.delay <= 0) { this.spawnQueue.splice(i, 1); this.spawnUnit(s.team, s.id, s.laneY); }
+      if (s.delay <= 0) { this.spawnQueue.splice(i, 1); this.spawnUnit(s.team, s.id, s.laneY, s.x); }
     }
     // spatial grid
     this.grid.clear();
@@ -164,7 +195,7 @@ export class Battle {
     updateProjectiles(this, dt);
     for (const b of this.bases) { b.flash = Math.max(0, b.flash - dt * 4); this.towerFire(b, dt); }
     // remove finished corpses
-    for (let i = this.units.length - 1; i >= 0; i--) if (this.units[i].state === 'dead' && this.units[i].deadT > 0.9) this.units.splice(i, 1);
+    for (let i = this.units.length - 1; i >= 0; i--) if (this.units[i].state === 'dead' && this.units[i].deadT > 1.5) this.units.splice(i, 1);
     this.updateFrontline();
   }
 
@@ -207,6 +238,7 @@ export class Battle {
     const c = {};
     for (const u of this.units) if (u.team === team && u.state !== 'dead') c[u.type.id] = (c[u.type.id] || 0) + 1;
     for (const s of this.spawnQueue) if (s.team === team) c[s.id] = (c[s.id] || 0) + 1;
+    for (const id of this.waveQueue[team]) c[id] = (c[id] || 0) + UNITS[id].squad;
     return c;
   }
 }
